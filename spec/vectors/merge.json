@@ -1,0 +1,2980 @@
+{
+  "cases": [
+    {
+      "expired": [],
+      "local": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "local",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1799999999990,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "old",
+                "retired": 5
+              }
+            ],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "name": "concurrent edits keep the losing password",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "remote",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1799999999980,
+            "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "older",
+                "retired": 1
+              }
+            ],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "result": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "local",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1799999999990,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "remote",
+                "retired": 1799999999980
+              },
+              {
+                "password": "old",
+                "retired": 5
+              },
+              {
+                "password": "older",
+                "retired": 1
+              }
+            ],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "x",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 100,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "c",
+                "retired": 40
+              },
+              {
+                "password": "é",
+                "retired": 40
+              }
+            ],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "name": "history tie order: equal retired sorts by password bytes",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "y",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 200,
+            "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "b",
+                "retired": 40
+              },
+              {
+                "password": "a",
+                "retired": 40
+              },
+              {
+                "password": "B",
+                "retired": 40
+              }
+            ],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "result": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "y",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 200,
+            "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "x",
+                "retired": 100
+              },
+              {
+                "password": "B",
+                "retired": 40
+              },
+              {
+                "password": "a",
+                "retired": 40
+              },
+              {
+                "password": "b",
+                "retired": 40
+              },
+              {
+                "password": "c",
+                "retired": 40
+              },
+              {
+                "password": "é",
+                "retired": 40
+              }
+            ],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "x",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 100,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "p0",
+                "retired": 1000
+              },
+              {
+                "password": "p1",
+                "retired": 999
+              },
+              {
+                "password": "p2",
+                "retired": 998
+              },
+              {
+                "password": "p3",
+                "retired": 997
+              },
+              {
+                "password": "p4",
+                "retired": 996
+              },
+              {
+                "password": "p5",
+                "retired": 995
+              },
+              {
+                "password": "p6",
+                "retired": 994
+              },
+              {
+                "password": "p7",
+                "retired": 993
+              },
+              {
+                "password": "p8",
+                "retired": 992
+              },
+              {
+                "password": "p9",
+                "retired": 991
+              }
+            ],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "name": "history is cut to 10",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "y",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 200,
+            "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "zz",
+                "retired": 5000
+              }
+            ],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "result": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "y",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 200,
+            "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "zz",
+                "retired": 5000
+              },
+              {
+                "password": "p0",
+                "retired": 1000
+              },
+              {
+                "password": "p1",
+                "retired": 999
+              },
+              {
+                "password": "p2",
+                "retired": 998
+              },
+              {
+                "password": "p3",
+                "retired": 997
+              },
+              {
+                "password": "p4",
+                "retired": 996
+              },
+              {
+                "password": "p5",
+                "retired": 995
+              },
+              {
+                "password": "p6",
+                "retired": 994
+              },
+              {
+                "password": "p7",
+                "retired": 993
+              },
+              {
+                "password": "p8",
+                "retired": 992
+              }
+            ],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "new",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1799999999995,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "old",
+                "retired": 1799999999995
+              }
+            ],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "name": "a local password change wins and keeps its history",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "old",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 100,
+            "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "result": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "new",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1799999999995,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "old",
+                "retired": 1799999999995
+              }
+            ],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "pw",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1799999999900,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "name": "edit against a newer delete",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "horizon": 0,
+        "items": [],
+        "tombstones": [
+          {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "modified": 1799999999950,
+            "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        ],
+        "v": 1
+      },
+      "result": {
+        "horizon": 0,
+        "items": [],
+        "tombstones": [
+          {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "modified": 1799999999950,
+            "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        ],
+        "v": 1
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "pw",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1799999999900,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "name": "edit against an older delete",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "horizon": 0,
+        "items": [],
+        "tombstones": [
+          {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "modified": 1799999999850,
+            "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        ],
+        "v": 1
+      },
+      "result": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "pw",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1799999999900,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "local",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1799999999900,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "name": "full tie: the remote entry wins",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "remote",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1799999999900,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "result": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "remote",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1799999999900,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "local",
+                "retired": 1799999999900
+              }
+            ],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "local",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1799999999900,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "name": "full tie between an item and a tombstone: the remote tombstone wins",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "horizon": 0,
+        "items": [],
+        "tombstones": [
+          {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "modified": 1799999999900,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ],
+        "v": 1
+      },
+      "result": {
+        "horizon": 0,
+        "items": [],
+        "tombstones": [
+          {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "modified": 1799999999900,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ],
+        "v": 1
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "b",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 100,
+            "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "name": "modified_by breaks a tie on modified",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "a",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 100,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "result": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "b",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 100,
+            "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "a",
+                "retired": 100
+              }
+            ],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "horizon": 1800086400001,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "pw",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1800086400001,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "old",
+                "retired": 1800172800000
+              },
+              {
+                "password": "mid",
+                "retired": 1800043200000
+              }
+            ],
+            "type": "login"
+          }
+        ],
+        "tombstones": [
+          {
+            "id": "00000000-0000-4000-8000-000000000002",
+            "modified": 1800259200000,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ],
+        "v": 1
+      },
+      "name": "clamping of stamps, retired, and horizon",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "horizon": 0,
+        "items": [],
+        "tombstones": [],
+        "v": 1
+      },
+      "result": {
+        "horizon": 1784448000000,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "pw",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1800000000000,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "mid",
+                "retired": 1800043200000
+              },
+              {
+                "password": "old",
+                "retired": 1800000000000
+              }
+            ],
+            "review": "clamped",
+            "type": "login"
+          }
+        ],
+        "tombstones": [
+          {
+            "id": "00000000-0000-4000-8000-000000000002",
+            "modified": 1800000000000,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ],
+        "v": 1
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "horizon": 1784534400000,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "pw",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1800086400000,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "name": "now + DAY exactly is not clamped",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "horizon": 0,
+        "items": [],
+        "tombstones": [],
+        "v": 1
+      },
+      "result": {
+        "horizon": 1784534400000,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "pw",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1800086400000,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "horizon": 1800000000000,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "pw",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1800000000000,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [
+          {
+            "id": "00000000-0000-4000-8000-000000000002",
+            "modified": 1799913600000,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ],
+        "v": 1
+      },
+      "name": "a clock in 1970",
+      "now": 1000,
+      "op": "merge",
+      "remote": {
+        "horizon": 1800000000000,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "pw",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1800000000000,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [
+          {
+            "id": "00000000-0000-4000-8000-000000000002",
+            "modified": 1799913600000,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ],
+        "v": 1
+      },
+      "result": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "pw",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1000,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "review": "clamped",
+            "type": "login"
+          }
+        ],
+        "tombstones": [
+          {
+            "id": "00000000-0000-4000-8000-000000000002",
+            "modified": 1000,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ],
+        "v": 1
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "horizon": 0,
+        "items": [],
+        "tombstones": [
+          {
+            "id": "00000000-0000-4000-8000-000000000002",
+            "modified": 0,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ],
+        "v": 1
+      },
+      "name": "now under 180 days: cutoff saturates at 0",
+      "now": 15551999999,
+      "op": "merge",
+      "remote": {
+        "horizon": 0,
+        "items": [],
+        "tombstones": [
+          {
+            "id": "00000000-0000-4000-8000-000000000002",
+            "modified": 0,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ],
+        "v": 1
+      },
+      "result": {
+        "horizon": 0,
+        "items": [],
+        "tombstones": [
+          {
+            "id": "00000000-0000-4000-8000-000000000002",
+            "modified": 0,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ],
+        "v": 1
+      }
+    },
+    {
+      "expired": [
+        {
+          "created": 0,
+          "favourite": false,
+          "fields": [],
+          "folder": "",
+          "id": "00000000-0000-4000-8000-000000000001",
+          "login": {
+            "apps": [],
+            "passkeys": [],
+            "password": "pw",
+            "totp": null,
+            "uris": [],
+            "username": "u"
+          },
+          "modified": 1783583999999,
+          "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "name": "n",
+          "notes": "",
+          "password_history": [],
+          "type": "login"
+        }
+      ],
+      "local": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "pw",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1783583999999,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          },
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000002",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "pw",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1783584000000,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "name": "expiry: a local-only item older than the remote horizon",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "horizon": 1783584000000,
+        "items": [],
+        "tombstones": [],
+        "v": 1
+      },
+      "result": {
+        "horizon": 1783584000000,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000002",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "pw",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1783584000000,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "horizon": 0,
+        "items": [],
+        "tombstones": [],
+        "v": 1
+      },
+      "name": "expiry uses the other side's horizon",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "horizon": 1783584000000,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "pw",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1783583999999,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "result": {
+        "horizon": 1783584000000,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "pw",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1783583999999,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "pw",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1782720000000,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "name": "an item paired with a tombstone never expires",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "horizon": 1783584000000,
+        "items": [],
+        "tombstones": [
+          {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "modified": 1782633600000,
+            "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        ],
+        "v": 1
+      },
+      "result": {
+        "horizon": 1783584000000,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "pw",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1782720000000,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "horizon": 5,
+        "items": [],
+        "tombstones": [
+          {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "modified": 1784447999999,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000002",
+            "modified": 1784448000000,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ],
+        "v": 1
+      },
+      "name": "purge raises the horizon to cutoff",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "horizon": 7,
+        "items": [],
+        "tombstones": [],
+        "v": 1
+      },
+      "result": {
+        "horizon": 1784448000000,
+        "items": [],
+        "tombstones": [
+          {
+            "id": "00000000-0000-4000-8000-000000000002",
+            "modified": 1784448000000,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ],
+        "v": 1
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "horizon": 5,
+        "items": [],
+        "tombstones": [
+          {
+            "id": "00000000-0000-4000-8000-000000000002",
+            "modified": 1784448000000,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ],
+        "v": 1
+      },
+      "name": "no purge: the greater horizon",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "horizon": 7,
+        "items": [],
+        "tombstones": [],
+        "v": 1
+      },
+      "result": {
+        "horizon": 7,
+        "items": [],
+        "tombstones": [
+          {
+            "id": "00000000-0000-4000-8000-000000000002",
+            "modified": 1784448000000,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ],
+        "v": 1
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "horizon": 0,
+        "items": [
+          {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "modified": 1800172800000,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "number": 1,
+            "password_history": [
+              {
+                "retired": 1800432000000
+              }
+            ],
+            "type": "card"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "name": "unknown item type merges whole; only modified is clamped",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "horizon": 0,
+        "items": [
+          {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "modified": 200,
+            "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "number": 2,
+            "password_history": [
+              {
+                "retired": 1800432000000
+              }
+            ],
+            "type": "card"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "result": {
+        "horizon": 0,
+        "items": [
+          {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "modified": 1800000000000,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "number": 1,
+            "password_history": [
+              {
+                "retired": 1800432000000
+              }
+            ],
+            "review": "clamped",
+            "type": "card"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "horizon": 0,
+        "items": [
+          {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "modified": 100,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "number": 1,
+            "password_history": [
+              {
+                "retired": 1800432000000
+              }
+            ],
+            "type": "card"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "name": "unknown item type, the newer wins",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "horizon": 0,
+        "items": [
+          {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "modified": 200,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "number": 2,
+            "password_history": [
+              {
+                "retired": 1800432000000
+              }
+            ],
+            "type": "card"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "result": {
+        "horizon": 0,
+        "items": [
+          {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "modified": 200,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "number": 2,
+            "password_history": [
+              {
+                "retired": 1800432000000
+              }
+            ],
+            "type": "card"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "a": 1,
+        "horizon": 0,
+        "items": [],
+        "only_local": {
+          "x": []
+        },
+        "tombstones": [],
+        "v": 1
+      },
+      "name": "unknown top-level fields: remote values, plus local-only keys",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "a": 2,
+        "horizon": 0,
+        "items": [],
+        "only_remote": true,
+        "tombstones": [],
+        "v": 1
+      },
+      "result": {
+        "a": 2,
+        "horizon": 0,
+        "items": [],
+        "only_local": {
+          "x": []
+        },
+        "only_remote": true,
+        "tombstones": [],
+        "v": 1
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "horizon": 0,
+        "items": [],
+        "tombstones": [],
+        "v": 2
+      },
+      "name": "the greater v",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "horizon": 0,
+        "items": [],
+        "tombstones": [],
+        "v": 1
+      },
+      "result": {
+        "horizon": 0,
+        "items": [],
+        "tombstones": [],
+        "v": 2
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "horizon": 3,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "pw",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1799999999999,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "old",
+                "retired": 5
+              }
+            ],
+            "type": "login"
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000002",
+            "modified": 9,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "number": 4,
+            "password_history": [
+              {
+                "retired": 1800432000000
+              }
+            ],
+            "type": "card"
+          }
+        ],
+        "tombstones": [
+          {
+            "id": "00000000-0000-4000-8000-000000000003",
+            "modified": 1799913600000,
+            "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        ],
+        "v": 1,
+        "z": [
+          1
+        ]
+      },
+      "name": "equal bodies merge to the same content",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "horizon": 3,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "pw",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1799999999999,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "old",
+                "retired": 5
+              }
+            ],
+            "type": "login"
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000002",
+            "modified": 9,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "number": 4,
+            "password_history": [
+              {
+                "retired": 1800432000000
+              }
+            ],
+            "type": "card"
+          }
+        ],
+        "tombstones": [
+          {
+            "id": "00000000-0000-4000-8000-000000000003",
+            "modified": 1799913600000,
+            "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        ],
+        "v": 1,
+        "z": [
+          1
+        ]
+      },
+      "result": {
+        "horizon": 3,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "pw",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1799999999999,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "old",
+                "retired": 5
+              }
+            ],
+            "type": "login"
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000002",
+            "modified": 9,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "number": 4,
+            "password_history": [
+              {
+                "retired": 1800432000000
+              }
+            ],
+            "type": "card"
+          }
+        ],
+        "tombstones": [
+          {
+            "id": "00000000-0000-4000-8000-000000000003",
+            "modified": 1799913600000,
+            "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        ],
+        "v": 1,
+        "z": [
+          1
+        ]
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "modified": 100,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "x",
+                "retired": 1800172800000
+              },
+              {
+                "password": "y",
+                "retired": 1800043200000
+              },
+              {
+                "password": "",
+                "retired": 1
+              }
+            ],
+            "type": "note"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "name": "a note history is normalised after clamping",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "horizon": 0,
+        "items": [],
+        "tombstones": [],
+        "v": 1
+      },
+      "result": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "modified": 100,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "y",
+                "retired": 1800043200000
+              },
+              {
+                "password": "x",
+                "retired": 1800000000000
+              }
+            ],
+            "type": "note"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "horizon": 0,
+        "items": [],
+        "tombstones": [],
+        "v": 1
+      },
+      "name": "an unsorted history from another client is normalised",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "cur",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 100,
+            "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "a",
+                "retired": 1
+              },
+              {
+                "password": "b",
+                "retired": 9
+              },
+              {
+                "password": "cur",
+                "retired": 5
+              },
+              {
+                "password": "a",
+                "retired": 3
+              }
+            ],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "result": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "cur",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 100,
+            "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "b",
+                "retired": 9
+              },
+              {
+                "password": "a",
+                "retired": 3
+              }
+            ],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "same",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 100,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "same",
+                "retired": 50
+              }
+            ],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "name": "a losing password equal to the winner's is not kept",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "same",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 200,
+            "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "result": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "same",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 200,
+            "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 100,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "",
+                "retired": 7
+              },
+              {
+                "password": "old",
+                "retired": 5
+              }
+            ],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "name": "an empty losing password is not kept",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "new",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 200,
+            "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "result": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "new",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 200,
+            "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "old",
+                "retired": 5
+              }
+            ],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      }
+    },
+    {
+      "expired": [],
+      "local": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "pw",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 100,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "name": "a login that loses to a note loses its password",
+      "now": 1800000000000,
+      "op": "merge",
+      "remote": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "modified": 200,
+            "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "note"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "result": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "modified": 200,
+            "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "note"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      }
+    },
+    {
+      "action": "update",
+      "args": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "item": {
+          "created": 0,
+          "favourite": false,
+          "fields": [],
+          "folder": "",
+          "id": "00000000-0000-4000-8000-000000000001",
+          "login": {
+            "apps": [],
+            "passkeys": [],
+            "password": "B",
+            "totp": null,
+            "uris": [],
+            "username": "u"
+          },
+          "modified": 10,
+          "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "name": "n",
+          "notes": "",
+          "password_history": [],
+          "type": "login"
+        }
+      },
+      "body": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "A",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 10,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "device_id": "dddddddddddddddddddddddddddddddd",
+      "name": "a password change adds the old password",
+      "now": 1800000000000,
+      "op": "edit",
+      "result": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "B",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1800000000000,
+            "modified_by": "dddddddddddddddddddddddddddddddd",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "A",
+                "retired": 1800000000000
+              }
+            ],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      }
+    },
+    {
+      "action": "update",
+      "args": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "item": {
+          "created": 0,
+          "favourite": false,
+          "fields": [],
+          "folder": "",
+          "id": "00000000-0000-4000-8000-000000000001",
+          "login": {
+            "apps": [],
+            "passkeys": [],
+            "password": "A",
+            "totp": null,
+            "uris": [],
+            "username": "u"
+          },
+          "modified": 20,
+          "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "name": "n",
+          "notes": "",
+          "password_history": [
+            {
+              "password": "A",
+              "retired": 20
+            }
+          ],
+          "type": "login"
+        }
+      },
+      "body": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "B",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 20,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "A",
+                "retired": 20
+              }
+            ],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "device_id": "dddddddddddddddddddddddddddddddd",
+      "name": "A to B to A leaves no A in history",
+      "now": 1800000000000,
+      "op": "edit",
+      "result": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "A",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1800000000000,
+            "modified_by": "dddddddddddddddddddddddddddddddd",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "B",
+                "retired": 1800000000000
+              }
+            ],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      }
+    },
+    {
+      "action": "update",
+      "args": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "item": {
+          "created": 0,
+          "favourite": false,
+          "fields": [],
+          "folder": "",
+          "id": "00000000-0000-4000-8000-000000000001",
+          "login": {
+            "apps": [],
+            "passkeys": [],
+            "password": "A",
+            "totp": null,
+            "uris": [],
+            "username": "u"
+          },
+          "modified": 10,
+          "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "name": "renamed",
+          "notes": "",
+          "password_history": [],
+          "type": "login"
+        }
+      },
+      "body": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "A",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 10,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "review": "clamped",
+            "type": "login"
+          }
+        ],
+        "k": 0,
+        "tombstones": [],
+        "v": 1
+      },
+      "device_id": "dddddddddddddddddddddddddddddddd",
+      "name": "an edit removes review",
+      "now": 1800000000000,
+      "op": "edit",
+      "result": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "A",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1800000000000,
+            "modified_by": "dddddddddddddddddddddddddddddddd",
+            "name": "renamed",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "k": 0,
+        "tombstones": [],
+        "v": 1
+      }
+    },
+    {
+      "action": "update",
+      "args": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "item": {
+          "created": 0,
+          "favourite": false,
+          "fields": [],
+          "folder": "",
+          "id": "00000000-0000-4000-8000-000000000001",
+          "login": {
+            "apps": [],
+            "passkeys": [],
+            "password": "A",
+            "totp": null,
+            "uris": [],
+            "username": "u"
+          },
+          "modified": 10,
+          "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "name": "n",
+          "notes": "",
+          "password_history": [],
+          "type": "login"
+        }
+      },
+      "body": {
+        "horizon": 0,
+        "items": [
+          {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "modified": 10,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "number": 1,
+            "password_history": [
+              {
+                "retired": 1800432000000
+              }
+            ],
+            "type": "card"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "device_id": "dddddddddddddddddddddddddddddddd",
+      "error": "input.unsupported_item",
+      "name": "an unknown type is never edited",
+      "now": 1800000000000,
+      "op": "edit"
+    },
+    {
+      "action": "import",
+      "args": {
+        "item": {
+          "created": 1234,
+          "favourite": false,
+          "fields": [],
+          "folder": "",
+          "id": "00000000-0000-4000-8000-000000000009",
+          "login": {
+            "apps": [],
+            "passkeys": [],
+            "password": "imported",
+            "totp": null,
+            "uris": [],
+            "username": "u"
+          },
+          "modified": 5,
+          "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "n",
+          "notes": "",
+          "password_history": [],
+          "type": "login"
+        },
+        "rng": "a0a1a2a3a4a5a6a7a8a9aaabacadaeaf"
+      },
+      "body": {
+        "horizon": 0,
+        "items": [],
+        "tombstones": [],
+        "v": 1
+      },
+      "device_id": "dddddddddddddddddddddddddddddddd",
+      "name": "import stamps modified and keeps created",
+      "now": 1800000000000,
+      "op": "edit",
+      "result": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 1234,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "a0a1a2a3-a4a5-46a7-a8a9-aaabacadaeaf",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "imported",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1800000000000,
+            "modified_by": "dddddddddddddddddddddddddddddddd",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      }
+    },
+    {
+      "action": "restore",
+      "args": {
+        "item": {
+          "created": 0,
+          "favourite": false,
+          "fields": [],
+          "folder": "",
+          "id": "00000000-0000-4000-8000-000000000001",
+          "login": {
+            "apps": [],
+            "passkeys": [],
+            "password": "A",
+            "totp": null,
+            "uris": [],
+            "username": "u"
+          },
+          "modified": 10,
+          "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "n",
+          "notes": "",
+          "password_history": [],
+          "type": "login"
+        }
+      },
+      "body": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "B",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 40,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "A",
+                "retired": 40
+              }
+            ],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "device_id": "dddddddddddddddddddddddddddddddd",
+      "name": "restore keeps the current password in history",
+      "now": 1800000000000,
+      "op": "edit",
+      "result": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "A",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1800000000000,
+            "modified_by": "dddddddddddddddddddddddddddddddd",
+            "name": "n",
+            "notes": "",
+            "password_history": [
+              {
+                "password": "B",
+                "retired": 1800000000000
+              }
+            ],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      }
+    },
+    {
+      "action": "restore",
+      "args": {
+        "item": {
+          "created": 0,
+          "favourite": false,
+          "fields": [],
+          "folder": "",
+          "id": "00000000-0000-4000-8000-000000000001",
+          "login": {
+            "apps": [],
+            "passkeys": [],
+            "password": "A",
+            "totp": null,
+            "uris": [],
+            "username": "u"
+          },
+          "modified": 10,
+          "modified_by": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "n",
+          "notes": "",
+          "password_history": [],
+          "review": "clamped",
+          "type": "login"
+        }
+      },
+      "body": {
+        "horizon": 0,
+        "items": [],
+        "tombstones": [
+          {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "modified": 50,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ],
+        "v": 1
+      },
+      "device_id": "dddddddddddddddddddddddddddddddd",
+      "name": "restore replaces a tombstone",
+      "now": 1800000000000,
+      "op": "edit",
+      "result": {
+        "horizon": 0,
+        "items": [
+          {
+            "created": 0,
+            "favourite": false,
+            "fields": [],
+            "folder": "",
+            "id": "00000000-0000-4000-8000-000000000001",
+            "login": {
+              "apps": [],
+              "passkeys": [],
+              "password": "A",
+              "totp": null,
+              "uris": [],
+              "username": "u"
+            },
+            "modified": 1800000000000,
+            "modified_by": "dddddddddddddddddddddddddddddddd",
+            "name": "n",
+            "notes": "",
+            "password_history": [],
+            "type": "login"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      }
+    },
+    {
+      "action": "delete",
+      "args": {
+        "id": "00000000-0000-4000-8000-000000000001"
+      },
+      "body": {
+        "horizon": 0,
+        "items": [
+          {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "modified": 10,
+            "modified_by": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "number": 1,
+            "password_history": [
+              {
+                "retired": 1800432000000
+              }
+            ],
+            "type": "card"
+          }
+        ],
+        "tombstones": [],
+        "v": 1
+      },
+      "device_id": "dddddddddddddddddddddddddddddddd",
+      "name": "delete leaves a stamped tombstone",
+      "now": 1800000000000,
+      "op": "edit",
+      "result": {
+        "horizon": 0,
+        "items": [],
+        "tombstones": [
+          {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "modified": 1800000000000,
+            "modified_by": "dddddddddddddddddddddddddddddddd"
+          }
+        ],
+        "v": 1
+      }
+    },
+    {
+      "action": "delete",
+      "args": {
+        "id": "00000000-0000-4000-8000-000000000001"
+      },
+      "body": {
+        "horizon": 0,
+        "items": [],
+        "tombstones": [],
+        "v": 1
+      },
+      "device_id": "dddddddddddddddddddddddddddddddd",
+      "error": "input.not_found",
+      "name": "delete of a missing item",
+      "now": 1800000000000,
+      "op": "edit"
+    }
+  ],
+  "description": "The merge rule and local edits. Compare items, tombstones, and expired items as sets keyed by id."
+}

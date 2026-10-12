@@ -465,27 +465,6 @@ mod tests {
 
     #[cfg(feature = "insecure-test-kdf")]
     #[test]
-    fn golden_vault_file_with_the_test_parameters() {
-        // Cross-checked independently with argon2-cffi and PyNaCl.
-        let mut rng = BufferRng::new(&[
-            &[0x11; 16],
-            &[0x22; 16],
-            &[0x33; 32],
-            &[0x44; 16],
-            &[0x55; 24],
-            &[0x66; 24],
-        ]);
-        let v = create_vault(&mut rng, PW, crate::kdf::TEST, true).unwrap();
-        rng.assert_consumed();
-        let golden = include_str!("../tests/golden/create-vault-test-kdf.hex");
-        if std::env::var("VAULT_PRINT_GOLDEN").is_ok() {
-            println!("{}", hex::encode(&v.file));
-        }
-        assert_eq!(hex::encode(&v.file), golden.trim());
-    }
-
-    #[cfg(feature = "insecure-test-kdf")]
-    #[test]
     fn test_parameters_work_in_a_test_build() {
         let mut rng = CountingRng(19);
         let v = create_vault(&mut rng, PW, crate::kdf::TEST, true).unwrap();

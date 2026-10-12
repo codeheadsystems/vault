@@ -1,0 +1,189 @@
+{
+  "cases": [
+    {
+      "fp": "c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+      "name": "https with fp",
+      "op": "format",
+      "text": "vault://setup?url=https%3A%2F%2Fvault.example%3A8443%2Fbase&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3&fp=c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+      "token": "303132333435363738393a3b3c3d3e3f40414243",
+      "url": "https://vault.example:8443/base"
+    },
+    {
+      "fp": null,
+      "name": "https without fp",
+      "op": "format",
+      "text": "vault://setup?url=https%3A%2F%2Fvault.example%2F&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "token": "303132333435363738393a3b3c3d3e3f40414243",
+      "url": "https://vault.example"
+    },
+    {
+      "fp": "c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+      "name": "loopback http drops fp",
+      "op": "format",
+      "text": "vault://setup?url=http%3A%2F%2F%5B%3A%3A1%5D%3A8080%2F&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "token": "303132333435363738393a3b3c3d3e3f40414243",
+      "url": "http://[::1]:8080"
+    },
+    {
+      "fp": null,
+      "name": "a path with a space and a plus",
+      "op": "format",
+      "text": "vault://setup?url=https%3A%2F%2Fvault.example%2Fa%2520b%2Bc%3Fq%3D1&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "token": "303132333435363738393a3b3c3d3e3f40414243",
+      "url": "https://vault.example/a b+c?q=1"
+    },
+    {
+      "error": "input.server_url",
+      "fp": null,
+      "name": "refused: non-loopback http",
+      "op": "format",
+      "token": "303132333435363738393a3b3c3d3e3f40414243",
+      "url": "http://vault.example"
+    },
+    {
+      "fp": null,
+      "input": "vault://setup?url=http%3A%2F%2F%5B%3A%3A1%5D%3A8080&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "[::1]",
+      "op": "parse",
+      "token": "303132333435363738393a3b3c3d3e3f40414243",
+      "url": "http://[::1]:8080/"
+    },
+    {
+      "fp": null,
+      "input": "vault://setup?url=http%3A%2F%2F127.1%3A8080&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "127.1 parses to 127.0.0.1",
+      "op": "parse",
+      "token": "303132333435363738393a3b3c3d3e3f40414243",
+      "url": "http://127.0.0.1:8080/"
+    },
+    {
+      "fp": null,
+      "input": "vault://setup?url=http%3A%2F%2FLOCALHOST&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "LOCALHOST lower-cased",
+      "op": "parse",
+      "token": "303132333435363738393a3b3c3d3e3f40414243",
+      "url": "http://localhost/"
+    },
+    {
+      "error": "input.server_url",
+      "input": "vault://setup?url=http%3A%2F%2Flocalhost.%3A8080&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "localhost. is not loopback",
+      "op": "parse"
+    },
+    {
+      "error": "input.server_url",
+      "input": "vault://setup?url=https%3A%2F%2Fuser%40vault.example&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "user information",
+      "op": "parse"
+    },
+    {
+      "error": "input.server_url",
+      "input": "vault://setup?url=https%3A%2F%2Fvault.example%2F%23frag&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "a fragment",
+      "op": "parse"
+    },
+    {
+      "error": "input.server_url",
+      "input": "vault://setup?url=https%3A%2F%2Fvault.example%2F%23&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "an empty fragment",
+      "op": "parse"
+    },
+    {
+      "fp": null,
+      "input": "vault://setup?url=https%3A%2F%2Fvault.example&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "https without fp",
+      "op": "parse",
+      "token": "303132333435363738393a3b3c3d3e3f40414243",
+      "url": "https://vault.example/"
+    },
+    {
+      "fp": "c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+      "input": "vault://setup?url=https%3A%2F%2Fvault.example&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3&fp=c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+      "name": "https with fp",
+      "op": "parse",
+      "token": "303132333435363738393a3b3c3d3e3f40414243",
+      "url": "https://vault.example/"
+    },
+    {
+      "fp": null,
+      "input": "vault://setup?url=https%3A%2F%2Fvault.example&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3&future=1&x",
+      "name": "an unknown parameter",
+      "op": "parse",
+      "token": "303132333435363738393a3b3c3d3e3f40414243",
+      "url": "https://vault.example/"
+    },
+    {
+      "error": "input.server_url",
+      "input": "vault://setup?url=http%3A%2F%2Fvault.example&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "non-loopback http",
+      "op": "parse"
+    },
+    {
+      "error": "input.setup_text",
+      "input": "vault://setup?url=http%3A%2F%2F127.0.0.1&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3&fp=c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+      "name": "fp on loopback http",
+      "op": "parse"
+    },
+    {
+      "error": "input.fingerprint",
+      "input": "vault://setup?url=https%3A%2F%2Fvault.example&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3&fp=C0C1C2C3C4C5C6C7C8C9CACBCCCDCECFD0D1D2D3D4D5D6D7D8D9DADBDCDDDEDF",
+      "name": "upper-case fp",
+      "op": "parse"
+    },
+    {
+      "error": "input.setup_text",
+      "input": "vault://setup?url=https%3A%2F%2Fa.example&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3&url=https%3A%2F%2Fb.example",
+      "name": "a repeated url",
+      "op": "parse"
+    },
+    {
+      "fp": null,
+      "input": "vault://setup?url=https%3A%2F%2Fvault.example%2Fa+b&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "plus is literal",
+      "op": "parse",
+      "token": "303132333435363738393a3b3c3d3e3f40414243",
+      "url": "https://vault.example/a+b"
+    },
+    {
+      "error": "input.setup_text",
+      "input": "vault://setup?url=%zz&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "a bad percent escape",
+      "op": "parse"
+    },
+    {
+      "fp": null,
+      "input": "vault://setup?url=https%3A%2F%2Fvault.example&token=60rk4csm6mv3ee1s78xkrf9y7x042gj3",
+      "name": "a lower-case token",
+      "op": "parse",
+      "token": "303132333435363738393a3b3c3d3e3f40414243",
+      "url": "https://vault.example/"
+    },
+    {
+      "error": "input.setup_text",
+      "input": "vault://setup?url=https%3A%2F%2Fvault.example",
+      "name": "missing token",
+      "op": "parse"
+    },
+    {
+      "error": "input.setup_text",
+      "input": "https://vault.example",
+      "name": "not setup text",
+      "op": "parse"
+    },
+    {
+      "cert_der": "61206365727469666963617465277320444552206279746573",
+      "fp": "c9274d7777492fc4f857062b1618c2c44e23fd9e00e3b71f88801d87a0d5ba1f",
+      "matches": true,
+      "name": "the pinned certificate",
+      "op": "pin"
+    },
+    {
+      "cert_der": "616e6f74686572206365727469666963617465",
+      "fp": "c9274d7777492fc4f857062b1618c2c44e23fd9e00e3b71f88801d87a0d5ba1f",
+      "matches": false,
+      "name": "a certificate that fails the pin",
+      "op": "pin"
+    }
+  ],
+  "description": "Setup text vault://setup?url=...&token=...&fp=...: formatting, parsing with WHATWG URL rules for the server URL, and the certificate pin."
+}

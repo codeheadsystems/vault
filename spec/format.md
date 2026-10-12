@@ -234,10 +234,11 @@ A client refuses to write a body whose `v` is greater than the version it implem
 
 History order sorts entries by `retired`, newest first, and then by `password` as bytes in ascending
 order. Normalising a history means removing entries with an empty `password` and entries equal to
-the item's current `login.password`, deduplicating by `password` while keeping the newest
-`retired`, sorting in history order, and keeping the first 10. A
-decoder accepts duplicate passwords and any order; every edit and merge normalises. An unknown
-`match` value is kept and treated as `"never"` when filling.
+the item's current `login.password`, deduplicating by `password` while keeping the newest `retired`
+(on equal `retired`, the first entry in the list, with step 5 of the merge listing the winner's
+entries before the loser's), sorting in history order, and keeping the first 10. A decoder accepts
+duplicate passwords and any order; every edit and merge normalises. An unknown `match` value is kept
+and treated as `"never"` when filling.
 
 An item whose `type` the client does not know needs only `id`, `type`, `modified`, and
 `modified_by`, with the types the items table gives them. Every other key on it is kept without
@@ -261,7 +262,9 @@ and normalises the history. A delete replaces the item with a tombstone stamped 
 
 Imports and restores are local edits. An import creates items stamped as above and keeps the
 source's creation time in `created`. A restore of a whole vault or of one item copies the item from
-an older revision and stamps it as above.
+an older revision and stamps it as above. When the item exists as a login whose `login.password`
+differs from the restored one, the restore is an edit that changes `login.password`, so the current
+password goes into the restored item's history.
 
 ## Merge rule
 
@@ -285,7 +288,8 @@ local time `now`. With `DAY = 86,400,000` and `cutoff = now ⊖ 15,552,000,000` 
    union of both histories plus the loser's `login.password`, with `retired` set to the loser's
    `modified`. The result is normalised, which removes the winner's own current password.
 6. Purge. Tombstones with `modified < cutoff` are dropped. The result's `horizon` is the greater of
-   the two clamped input horizons, raised to `cutoff` when at least one tombstone was dropped.
+   the two clamped input horizons, raised to `cutoff` when at least one tombstone in the result of
+   step 4 was dropped. A tombstone that lost to an item in step 4 does not count.
 7. Top level. The result's `v` is the greater of the two. The result takes the remote value of
    each unknown top-level key and adds the keys present only in `L`.
 
@@ -358,17 +362,18 @@ On an integrity error the client keeps its local file, reports the error, and st
 
 1. Lists `GET /v1/revisions` and fetches every retained revision.
 2. When any revision whose `vault_id` matches carries a `wrap_nonce` that is neither current nor
-   retired, and opens with typed credentials in the credential change on another device flow, the
-   client completes that flow with that revision and stops. A revision whose wrap does not open
-   in that flow counts as garbage. Recovery continues past an unknown `wrap_nonce` only after the
-   flow fails and the user confirms that no credential change was made.
+   retired (taken in order of `generation`, then revision ID, highest first), and opens with typed
+   credentials in the credential change on another device flow, the client completes that flow with
+   that revision and stops. A revision whose wrap does not open in that flow counts as garbage.
+   Recovery continues past an unknown `wrap_nonce` only after the flow fails and the user confirms
+   that no credential change was made.
 3. Among the revisions whose `vault_id` matches, whose `generation` is at least the accepted
    generation, whose `wrap_nonce` is the current one, and which open, takes the one with the highest
-   generation.
+   generation, and on equal generations the highest revision ID.
 4. Merges the local body into it and pushes it at its generation plus one, with `If-Match` set to
    the current `ETag`.
-5. When no revision qualifies, pushes the local file at the accepted generation plus one, with the
-   same `If-Match`.
+5. When no revision qualifies, pushes the local file at the accepted generation plus one (or at
+   generation 1 when there is no accepted generation), with the same `If-Match`.
 
 A garbage file, whatever generation its header claims, never opens and is never chosen, so it
 cannot raise the generation of the vault. A re-pushed old revision loses to the honest revision

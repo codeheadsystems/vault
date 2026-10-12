@@ -120,6 +120,80 @@ pub enum InputKind {
     Fingerprint,
 }
 
+impl IntegrityKind {
+    /// The stable name of the rule, as `spec/vectors/` and other clients spell it.
+    pub fn code(self) -> &'static str {
+        match self {
+            IntegrityKind::Truncated => "integrity.truncated",
+            IntegrityKind::TrailingBytes => "integrity.trailing_bytes",
+            IntegrityKind::BadMagic => "integrity.bad_magic",
+            IntegrityKind::FormatVersion => "integrity.format_version",
+            IntegrityKind::UnknownFlags => "integrity.unknown_flags",
+            IntegrityKind::Generation => "integrity.generation",
+            IntegrityKind::KdfParams => "integrity.kdf_params",
+            IntegrityKind::TestKdfInRelease => "integrity.test_kdf_in_release",
+            IntegrityKind::SizeLimit => "integrity.size_limit",
+            IntegrityKind::PaddedSize => "integrity.padded_size",
+            IntegrityKind::Length => "integrity.length",
+            IntegrityKind::Padding => "integrity.padding",
+            IntegrityKind::Aead => "integrity.aead",
+            IntegrityKind::Json => "integrity.json",
+            IntegrityKind::Bom => "integrity.bom",
+            IntegrityKind::DuplicateKey => "integrity.duplicate_key",
+            IntegrityKind::Nesting => "integrity.nesting",
+            IntegrityKind::Number => "integrity.number",
+            IntegrityKind::MissingKey => "integrity.missing_key",
+            IntegrityKind::WrongType => "integrity.wrong_type",
+            IntegrityKind::BadValue => "integrity.bad_value",
+            IntegrityKind::DuplicateId => "integrity.duplicate_id",
+            IntegrityKind::VaultIdMismatch => "integrity.vault_id_mismatch",
+            IntegrityKind::GenerationRollback => "integrity.generation_rollback",
+            IntegrityKind::GenerationFork => "integrity.generation_fork",
+            IntegrityKind::RetiredWrapNonce => "integrity.retired_wrap_nonce",
+        }
+    }
+}
+
+impl InputKind {
+    /// The stable name of the rule, as `spec/vectors/` and other clients spell it.
+    pub fn code(self) -> &'static str {
+        match self {
+            InputKind::PasswordTooShort => "input.password_too_short",
+            InputKind::PasswordTooLong => "input.password_too_long",
+            InputKind::PasswordUnassigned => "input.password_unassigned",
+            InputKind::KdfParams => "input.kdf_params",
+            InputKind::Generator => "input.generator",
+            InputKind::NotFound => "input.not_found",
+            InputKind::UnsupportedItem => "input.unsupported_item",
+            InputKind::Header => "input.header",
+            InputKind::Body => "input.body",
+            InputKind::TooLarge => "input.too_large",
+            InputKind::GenerationLimit => "input.generation_limit",
+            InputKind::SetupText => "input.setup_text",
+            InputKind::ServerUrl => "input.server_url",
+            InputKind::Token => "input.token",
+            InputKind::Fingerprint => "input.fingerprint",
+        }
+    }
+}
+
+impl Error {
+    /// The stable name of the error, as `spec/vectors/` and other clients spell it: for example
+    /// `integrity.bad_magic`, `input.password_too_short`, or `wrong_credentials`.
+    pub fn code(self) -> &'static str {
+        match self {
+            Error::Integrity(k) => k.code(),
+            Error::InvalidInput(k) => k.code(),
+            Error::WrongCredentials => "wrong_credentials",
+            Error::SecretKeyTypo => "secret_key_typo",
+            Error::ReadOnlyBody => "read_only_body",
+            Error::ClockBeforeBuildTime => "clock_before_build_time",
+            Error::ClockSkew => "clock_skew",
+            Error::Rng => "rng",
+        }
+    }
+}
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

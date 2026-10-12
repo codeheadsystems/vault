@@ -21,8 +21,10 @@ proposed and approved. Every format change updates the spec and the test vectors
 | Path | Contents |
 | --- | --- |
 | `crates/vault-core/` | Keys, vault file, body schema, merge rule, and sync decisions; no I/O, builds for WASM |
-| `crates/vault-core/tests/` | Merge property tests and the release gate for the test KDF parameters |
-| `.github/workflows/ci.yml` | Format, lint, test, WASM build, `cargo-deny`, and `cargo-audit` |
+| `crates/vault-core/tests/` | Vector checks, merge property tests, and the release gate |
+| `crates/vault-core/examples/gen_vectors.rs` | The generator of `spec/vectors/` |
+| `tools/vectors-check/` | Independent Python check of `spec/vectors/` against the spec |
+| `.github/workflows/ci.yml` | Format, lint, test, WASM build, vectors, `cargo-deny`, and `cargo-audit`; manual runs only until v1 |
 | `deny.toml` | Allowed licences and sources for `cargo-deny` |
 | `rust-toolchain.toml` | Rust 1.96.0 with the `wasm32-unknown-unknown` target |
 
@@ -36,11 +38,13 @@ way, carries a `// SPEC-QUESTION:` comment.
 | --- | --- |
 | `cargo fmt --all --check` | Formatting |
 | `cargo clippy --workspace --all-targets -- -D warnings` | Lints |
-| `cargo test --workspace` | Unit, property, and release gate tests |
+| `cargo test --workspace` | Unit, vector, property, and release gate tests |
 | `VAULT_EXPECT_TEST_KDF=1 cargo test -p vault-core --features insecure-test-kdf` | Tests with the test KDF parameters accepted |
 | `cargo test -p vault-core --release --test release_gate` | Release build refuses `test_kdf` headers |
 | `cargo build -p vault-core --target wasm32-unknown-unknown --release` | WASM build |
 | `cargo deny check` | Licences, advisories, and sources |
+| `cargo run -p vault-core --example gen-vectors --features insecure-test-kdf` | Regenerate `spec/vectors/` |
+| `python3 -I tools/vectors-check/check.py` | Check the vectors in Python, after `pip install -r tools/vectors-check/requirements.txt` |
 
 The `insecure-test-kdf` feature accepts the test KDF parameters. A build without
 `debug_assertions` fails to compile with it, and no crate enables it through a dev-dependency.

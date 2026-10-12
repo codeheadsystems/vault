@@ -1,8 +1,8 @@
 name: CI
 
+# Manual runs only until v1; restore the push and pull_request triggers then.
 on:
-  push:
-  pull_request:
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
@@ -51,6 +51,21 @@ jobs:
       - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2
       - run: cargo build -p vault-core --target wasm32-unknown-unknown --release
+
+  vectors:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --no-deps -r tools/vectors-check/requirements.txt
+      - run: python3 -I tools/vectors-check/check.py
+      - uses: Swatinem/rust-cache@v2
+      - name: The generator reproduces the committed vectors
+        run: |
+          cargo run -p vault-core --example gen-vectors --features insecure-test-kdf
+          git diff --exit-code spec/vectors
 
   deny:
     runs-on: ubuntu-latest

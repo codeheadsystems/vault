@@ -31,3 +31,10 @@ proptest.workspace = true
 
 [lints]
 workspace = true
+
+# Writes `spec/vectors/`. It needs the test KDF parameters, so it is an example that only builds
+# with the feature; a separate crate enabling the feature would leak it into the workspace build.
+[[example]]
+name = "gen-vectors"
+path = "examples/gen_vectors.rs"
+required-features = ["insecure-test-kdf"]
