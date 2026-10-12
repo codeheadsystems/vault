@@ -1,6 +1,6 @@
 # Personal Password Manager: Requirements
 
-Oct 12, 2026 · @Ned Wolpert · Draft 5
+Oct 12, 2026 · @Ned Wolpert · Draft 7
 
 ## Overview
 
@@ -167,16 +167,18 @@ Clients sync on unlock, after every local change, and on a timer while unlocked.
 
 ### Rollback protection
 
-Every write increments the generation number in the authenticated header. Each client remembers the
-highest generation it has seen. A remote file with a lower generation is an integrity error, shown
-to the user and never merged. This stops a stolen token, or a server bug, from re-serving an old
+Every push to the server increments the generation number in the authenticated header; local
+saves between syncs do not. Each client remembers the highest generation it has accepted from a
+file that opened. A remote file with a lower generation is an integrity error, shown to the user
+and never merged. This stops a stolen token, or a server bug, from re-serving an old
 revision to undo a password change or bring back old items.
 
 - A deliberate restore (CORE-9) writes the restored content as a new revision with a higher
   generation, and re-stamps the restored items with the current time so the next merge keeps them.
 - A remote file that does not decrypt (garbage pushed with a stolen token, or corruption) is also
-  an integrity error. The client keeps its local copy, warns, and offers to push the local copy as
-  a new revision. It never treats an unreadable remote as an empty vault.
+  an integrity error. The client keeps its local copy, warns, and stops syncing until
+  `vault sync --recover` merges into the newest honest server revision (or, failing that, pushes
+  the local copy). It never treats an unreadable remote as an empty vault.
 - A brand-new device has no remembered generation, so it cannot detect a rollback on its first
   sync. This is a residual risk; the device does detect any later rollback.
 
@@ -218,9 +220,11 @@ The server is dumb. It stores bytes and tokens, and nothing else:
 
 - Clients refuse plain `http` to anything except loopback. A token sent in clear on the home
   network would let anyone on that network push revisions.
-- `vault serve` serves TLS with its own certificate or sits behind a reverse proxy. `vault serve
-  token add` includes the SHA-256 fingerprint of the server certificate in the URL and QR code; the
-  CLI and Android pin it.
+- `vault serve` serves TLS with its own certificate or sits behind a reverse proxy. For a
+  self-signed certificate, `vault serve token add` includes its SHA-256 fingerprint in the URL and
+  QR code, and the CLI and Android pin it. For a publicly trusted certificate (a reverse proxy with
+  Let's Encrypt, which renews every 60 to 90 days), the fingerprint is left out and clients use
+  ordinary certificate validation.
 - Firefox extensions cannot pin a certificate themselves, and `webRequest.getSecurityInfo()`
   returns no certificates for a host trusted through an exception. Firefox trusts `vault serve`
   through a certificate exception instead: the user opens the server URL in a tab once and accepts
@@ -317,7 +321,7 @@ code, exposed to the network. With the secret key, a leaked blob is 128 bits plu
 from being read, so the server's security is not load-bearing for confidentiality.
 
 The residual risk is a stolen device: it holds the blob and the secret key, so the master password
-is the remaining barrier against offline guessing. Defences are Argon2id parameters tuned to the
+is the remaining barrier against offline guessing. Defences are Argon2id parameters sized for the
 slowest client, a diceware passphrase offered at `vault init`, and a warning for weak passwords.
 After a device loss, `vault passwd --new-secret-key` restores the server-side guarantee for every
 revision written from then on.
@@ -393,7 +397,7 @@ P0 blocks v1.0; P1 should land in v1.0 but does not block it; P2 is after v1.0.
 | CORE-13 | Generation number in the authenticated header; rollback detected and reported, never merged | P0 |
 | CORE-14 | Merge clamps future stamps and honours the purge horizon | P0 |
 | CORE-15 | Argon2id parameter floor and ceiling checked before derivation, for every source | P0 |
-| CORE-16 | An undecryptable remote keeps the local copy, warns, and offers to push it | P0 |
+| CORE-16 | An undecryptable or rolled-back remote keeps the local copy, warns, and stops syncing; `vault sync --recover` repairs it | P0 |
 | CORE-11 | Emergency kit at `vault init`: secret key as text and QR code, plus the server URL | P0 |
 | CORE-12 | Secret key text form: `VLT1-` Crockford base32 with check value; forgiving decoder; typos reported before key derivation | P0 |
 | CORE-3 | Password generator: length, character classes, ambiguous-character exclusion, diceware passphrases | P0 |
@@ -417,7 +421,7 @@ P0 blocks v1.0; P1 should land in v1.0 but does not block it; P2 is after v1.0.
 | SRV-10 | Each revision records its pushing token; `token ls` shows each token's last push | P0 |
 | SRV-11 | `vault serve revisions prune --before <revision>`, run locally on the server | P1 |
 | SRV-4 | `vault serve` in the `vault` binary for Linux x86\_64 and arm64; data in its own directory, separate from client state | P0 |
-| SRV-5 | TLS with a supplied certificate, or plain HTTP bound to localhost behind a TLS reverse proxy; `token add` output carries the certificate fingerprint; no CORS headers | P0 |
+| SRV-5 | TLS with a supplied certificate, or plain HTTP bound to localhost behind a TLS reverse proxy; `token add` output carries the certificate fingerprint for a self-signed certificate; no CORS headers | P0 |
 | SRV-6 | Server-only build with no vault code | P1 |
 | SRV-8 | Container image | P2 |
 
@@ -490,7 +494,7 @@ P0 blocks v1.0; P1 should land in v1.0 but does not block it; P2 is after v1.0.
 | Area | Requirement |
 | --- | --- |
 | Setup | New vault to first synced item in under 5 minutes; adding a device in under 2 minutes, including typing the secret key |
-| Unlock | Argon2id at no less than 64 MiB and 3 iterations, tuned to about 1 s on the slowest client (Firefox WASM or the phone) |
+| Unlock | Argon2id at 64 MiB and 3 iterations by default, about 1 s or less on the slowest client (Firefox WASM or the phone); 128 or 256 MiB only by explicit choice |
 | Latency | `show` from a warm agent under 100 ms with no network; sync runs in the background |
 | Sync | A change on one online device is visible on another within 10 s of that device's next sync |
 | Scale | 2,000 items without noticeable slowdown; vault file under 2 MB |
@@ -499,7 +503,7 @@ P0 blocks v1.0; P1 should land in v1.0 but does not block it; P2 is after v1.0.
 | Integrity | No client ever merges a lower generation or treats an unreadable remote as empty |
 | Cost | One small process on hardware I already run |
 | Licence | MIT; dependencies MIT, Apache-2.0, BSD, ISC, Zlib, or Unicode, enforced by `cargo-deny` |
-| Simplicity | Format spec (header, body, item schema, merge rule, server API) under 400 lines; no client-specific data in the vault file |
+| Simplicity | Format spec (header, body, item schema, merge rule, server API) kept as short as the rules allow; no client-specific data in the vault file |
 
 ## Complexity guardrails
 
@@ -561,20 +565,30 @@ Still open: nothing at the requirements level. The format spec settles the rest.
 
 ## Deferred to the format spec
 
-Raised in the security review of Draft 3 and settled in the spec, not here:
+Raised in the security review of Draft 3. `spec/format.md` settles each of these:
 
-- HKDF inputs and domain labels; a fresh salt on every credential change; the wrap AEAD's
-  associated data covering format version, KDF parameters, salt, and generation.
+- HKDF inputs and domain labels, and a fresh salt on every credential change.
+- The wrap AEAD's associated data covers format version, flags, vault ID, KDF parameters, and
+  salt, but not the generation. The body AEAD authenticates the whole header, generation included,
+  so routine writes need only the vault key, which is all a quick-unlocked client holds.
 - Random 24-byte XChaCha20 nonces on every seal, never derived from a counter or the `ETag`.
-- Tie-break for two concurrent credential changes: higher generation, then device ID.
+- Concurrent credential changes: no tie-break rule is needed, because a credential change runs only
+  online and the conditional `PUT` lets exactly one win; the other aborts.
+- XChaCha20-Poly1305 is not key-committing. Partitioning-oracle attacks are infeasible because the
+  128-bit secret key is an input to the key-encryption key; the spec records this.
+
+## Client design
+
+Rules for individual clients that are not part of the shared format. Each client's design document
+settles the details:
+
 - CLI agent socket in `$XDG_RUNTIME_DIR`, mode 0600, with an `SO_PEERCRED` user check.
 - Clipboard: password-manager MIME hints (`x-kde-passwordManagerHint`) so clipboard managers skip
   copied secrets; clearing after 45 seconds does not purge a manager's history.
-- XChaCha20-Poly1305 is not key-committing. Partitioning-oracle attacks are infeasible because the
-  128-bit secret key is an input to the key-encryption key; the spec records this.
 - WebAuthn (v1.2): RP ID checked against the origin the browser reports; signature counter fixed at
   0, because synced passkeys and last-writer-wins merge make counters go backwards; UV flag set only
-  after a real unlock; cross-origin iframe calls handled.
+  after a real unlock; cross-origin iframe calls handled. Passkeys registered on two devices for the
+  same item at once may need a union merge rule; v1.2 decides.
 
 ## Future directions
 

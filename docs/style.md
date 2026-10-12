@@ -8,9 +8,9 @@ is the defect.
 
 ## Scope
 
-The spec (`spec/`), `README.md`, `CLAUDE.md`, and rustdoc comments follow this style. The
-requirements document under `docs/` is a product document; it keeps its first-person voice and
-is out of scope.
+Every document in the repository follows this style: the spec (`spec/`), everything under `docs/`,
+`README.md`, `CLAUDE.md`, and rustdoc comments. The one exception is `docs/requirements.md`, a
+product document that keeps its first-person voice.
 
 ## Register
 
