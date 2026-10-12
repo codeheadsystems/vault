@@ -57,7 +57,8 @@ of any client that connects.
 `vault serve token add <name>` creates a 20-byte token from the operating system's random source,
 stores the SHA-256 of its bytes under `<name>`, and prints the setup text (spec
 [Setup text](../spec/format.md#setup-text)) as text and as a QR code, followed by the certificate
-fingerprint in both forms. The token appears only in that output. The name is 1 to 32 characters
+fingerprint in both forms. The QR code draws light modules as blocks, for a terminal with a dark
+background. The token appears only in that output. The name is 1 to 32 characters
 from `a`-`z`, `0`-`9`, `-`, and `_`, and a name in use is refused.
 
 | Option | Effect |
@@ -78,12 +79,12 @@ token keep its name. `token ls` derives each token's last push from the retained
 | Path | Contents |
 | --- | --- |
 | `serve.toml` | Settings |
-| `tokens.json` | Per token: name, SHA-256 hash, and creation time |
+| `tokens.json` | `{"tokens": [{"name", "hash", "created"}]}`: per token, its name, the lowercase hex SHA-256 of its bytes, and its creation time |
 | `server.lock` | Held by the running server for its lifetime |
 | `lock` | Held by every writer while it writes |
 | `tls/cert.pem`, `tls/key.pem` | The generated certificate and key, when `init` made them |
 | `revisions/<id>.vault` | A revision's bytes |
-| `revisions/<id>.json` | A revision's `etag`, `size`, `created`, and `token` |
+| `revisions/<id>.json` | `{"etag", "size", "created", "token"}`: a revision's `ETag`, size in bytes, creation time, and token name |
 
 The directory and `revisions/` are mode `0700` and every file is mode `0600`, all owned by the
 user running the command. The server and every command refuse to start when any of them is owned
@@ -107,7 +108,8 @@ listen = "127.0.0.1:8080"
 ```
 
 At least one of `[https]` and `[http]` is present, and `[http]` listens on a loopback address only.
-Relative paths are relative to the data directory.
+Relative paths are relative to the data directory. Times in `tokens.json` and the metadata files
+take the form `2026-10-12T15:04:05Z`.
 
 ### Writes and crash safety
 
@@ -115,31 +117,39 @@ A second `vault serve` on the same data directory fails to take `server.lock` an
 
 A revision is stored in this order: the metadata to a temporary file and a rename, then the bytes
 to a temporary file, `fsync`, and a rename to `<id>.vault`, then an `fsync` of `revisions/`. A
-revision exists when its `.vault` file exists. At start, the server removes temporary files and
-metadata files without a `.vault` file. The current revision is the one with the highest ID.
+revision exists when its `.vault` file exists. At start, the server removes temporary files
+(`*.tmp`) in `revisions/` and in the top of the data directory, and metadata files without a
+`.vault` file. The current revision is the one with the highest ID.
 Revision file names are built from the ID as a decimal `u64`.
 
 Every writer holds an exclusive `flock` on `lock`: the server while it stores or deletes a
 revision, and `token`, `revisions prune`, and `revisions rm` while they edit. Writes to
 `tokens.json` use a temporary file and a rename. The server never writes `tokens.json`. It re-reads
 the file when its inode, modification time, or size changes, and answers every request with `401`
-while the file cannot be read or parsed.
+while the file cannot be read or parsed, or while it is a symbolic link or is accessible to the
+group or to others.
 
 The server keeps the current revision's `ETag` in memory and re-reads the current revision after
 `revisions rm` or `prune` changes it. It computes the `ETag` from the file's bytes, so a metadata
-file that disagrees with its revision does not stop clients from pushing.
+file that disagrees with its revision does not stop clients from pushing. A revision whose metadata
+file is missing or unreadable is still listed, with the `ETag` and size of its bytes, the
+modification time of its `.vault` file as `created`, and an empty `token`.
 
 ## Request handling
 
 - HTTP/1.1 only. TLS 1.2 and 1.3 through rustls with the `ring` provider.
 - A request whose token matches no stored hash receives `401` with `WWW-Authenticate: Bearer`.
-  Hashes are compared in constant time.
+  Hashes are compared in constant time. The token is checked before the path and the method, so
+  every request without a valid token receives `401`, whatever its path.
 - A request path is matched exactly. A revision ID in `/v1/revisions/<id>` is a decimal `u64`
-  without leading zeros; anything else receives `404`.
+  without leading zeros; anything else receives `404`, whatever the method. A valid ID with a
+  method other than `GET` receives `405`.
 - An unknown path receives `404`. A known path with another method receives `405` with `Allow`.
 - Revision bodies are `application/octet-stream`; `GET /v1/revisions` is `application/json`.
 - Limits: 10 s for the TLS handshake and the request headers together, 60 s for the whole request,
-  and 32 connections at a time.
+  and 32 connections at a time. A request that runs past 60 s while it waits for the PUT lock or
+  its body receives `408`; a store under way always completes. A response body still being sent
+  at 60 s, or a write that waits 60 s for a client that stopped reading, closes the connection.
 - `SIGTERM` and `SIGINT` stop accepting connections and end the process once requests in progress
   finish, or after 10 s.
 
@@ -151,20 +161,29 @@ The server handles `PUT /v1/vault` in this order, reading the body only at step 
 2. Take the PUT lock. PUTs are serialised, so of two PUTs with the same `If-Match`, one stores a
    revision and the other receives `412`.
 3. Check the condition. `If-Match` holds only when its value is exactly the current `ETag`; a list
-   of values, `*`, or a weak validator does not hold (`412`).
-4. Check a `Content-Length` over 16 MiB (`413`) and the quota (`507`).
+   of values, `*`, or a weak validator does not hold (`412`). `If-None-Match` holds only when its
+   value is exactly `*` and no revision exists; any other value receives `412`. `If-Match` on a
+   server with no revision receives `412`. With both headers, both conditions must hold, so the
+   request receives `412`.
+4. Check a `Content-Length` over 16 MiB (`413`) and the quota (`507`). Without `Content-Length`,
+   the quota check counts the body as 4,269 bytes, the smallest vault file, and step 7 checks the
+   quota again for the size received.
 5. Stream the body to a temporary file in `revisions/`, refusing it with `413` when it grows past
    16 MiB.
 6. Check the shape of a vault file (`400`): it starts with `VAULT`, and its size is 4,269 bytes or
    more, with `size - 173` a multiple of 4,096. This check uses no key.
 7. Store the revision and apply retention.
 
+Every response to a PUT other than `200` carries `Connection: close`, because its body may be
+unread.
+
 ### Retention and quota
 
 After it stores a revision, the server keeps:
 
 - the newest 100 revisions;
-- within the last 90 days, the newest revision of each token on each UTC day;
+- within the 90 UTC days ending today, today included, the newest revision of each token on each
+  UTC day;
 - the newest revision of each token, whatever its age;
 - the current revision.
 

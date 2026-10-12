@@ -1,0 +1,65 @@
+[package]
+name = "vault-cli"
+version = "0.1.0"
+description = "The vault command: the CLI client and vault serve"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "vault"
+path = "src/main.rs"
+
+[features]
+default = ["client", "serve"]
+client = ["dep:vault-client", "dep:vault-interop"]
+serve = ["dep:vault-server"]
+# Accept the test KDF parameters, for the integration tests. Debug builds only, as in vault-core.
+# Never enable it through a dev-dependency: feature unification would leak it into
+# `cargo test --workspace` and break the release gates.
+insecure-test-kdf = ["client", "vault-core/insecure-test-kdf", "vault-client/insecure-test-kdf"]
+
+[dependencies]
+vault-core = { path = "../vault-core" }
+vault-client = { path = "../vault-client", optional = true }
+vault-interop = { path = "../vault-interop", optional = true }
+vault-server = { path = "../vault-server", optional = true }
+clap.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+zeroize = { workspace = true, features = ["serde"] }
+hex.workspace = true
+getrandom.workspace = true
+signal-hook.workspace = true
+secret-service.workspace = true
+arboard.workspace = true
+rustix = { workspace = true, features = ["termios", "process", "fs", "net", "mm", "event", "time"] }
+nix.workspace = true
+memmap2.workspace = true
+clap_complete.workspace = true
+tokio = { workspace = true, features = ["rt", "net", "time"] }
+hyper = { workspace = true, features = ["client", "http1"] }
+hyper-util = { workspace = true, features = ["tokio"] }
+http-body-util.workspace = true
+bytes.workspace = true
+rustls.workspace = true
+tokio-rustls.workspace = true
+webpki-roots.workspace = true
+qrcode.workspace = true
+toml.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+vault-server = { path = "../vault-server" }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "sync"] }
+rustix = { workspace = true, features = ["pty"] }
+
+[lints]
+workspace = true
+
+# The integration tests unlock with typed credentials, so they use the test KDF parameters.
+[[test]]
+name = "cli"
+required-features = ["insecure-test-kdf"]

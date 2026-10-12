@@ -68,7 +68,7 @@ An error code names the rule a case breaks. The `integrity.` codes are integrity
 | `integrity.nesting` | Nesting deeper than 32 levels |
 | `integrity.number` | A number that is not an integer in `[0, 2^53)` without a sign, fraction, or exponent |
 | `integrity.missing_key` | A required key is missing |
-| `integrity.wrong_type` | A defined key has the wrong JSON type |
+| `integrity.wrong_type` | A defined key has the wrong JSON type, such as an `origin` that is not an object on a login or a note (an item of unknown `type` keeps any `origin` unchecked) |
 | `integrity.bad_value` | A value outside its stated bounds |
 | `integrity.duplicate_id` | An `id` twice among items and tombstones |
 | `integrity.vault_id_mismatch` | A remote file with another `vault_id` |

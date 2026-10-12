@@ -171,7 +171,9 @@ key's check value has already ruled out a typo. A failure at step 3 is an integr
 An unlock with typed credentials pulls first when the server is reachable. When the remote carries
 a `wrap_nonce` that is neither current nor retired, the unlock runs the credential change on
 another device flow instead of trying the local file, so a new password typed after a change
-elsewhere is not reported as wrong.
+elsewhere is not reported as wrong. A remote whose `wrap_nonce` the client refused earlier does not
+replace the local file; the unlock opens the local file, and the sync reports the refused wrap, so
+garbage under a fresh `wrap_nonce` cannot stop a device from unlocking.
 
 ## Body schema
 
@@ -270,9 +272,10 @@ and normalises the history. A delete replaces the item with a tombstone stamped 
 
 Imports and restores are local edits. An import creates items stamped as above and keeps the
 source's creation time in `created`. A restore of a whole vault or of one item copies the item from
-an older revision and stamps it as above. When the item exists as a login whose `login.password`
-differs from the restored one, the restore is an edit that changes `login.password`, so the current
-password goes into the restored item's history.
+an older revision and stamps it as above. When the item exists, the restored item's
+`password_history` is the union of the revision item's history, the existing item's history, and
+the existing item's `login.password` with `retired = now` when it differs from the restored one;
+normalising that history drops the restored password itself.
 
 ## Merge rule
 
@@ -363,6 +366,10 @@ A client being set up has no accepted generation, so it accepts whatever generat
 pulls. When the secret key comes from the emergency kit, the client also checks the remote
 `vault_id` against the kit's.
 
+A client that already holds a vault and replaces its server token (after a `401`) checks that the
+server's vault has the stored `vault_id`. A `404` is accepted, as from a server that lost its data:
+the next sync pushes the local file with `If-None-Match: *`.
+
 ### Recovery after an integrity error
 
 On an integrity error the client keeps its local file, reports the error, and stops syncing.
@@ -372,7 +379,8 @@ On an integrity error the client keeps its local file, reports the error, and st
 2. When any revision whose `vault_id` matches carries a `wrap_nonce` that is neither current nor
    retired (taken in order of `generation`, then revision ID, highest first), and opens with typed
    credentials in the credential change on another device flow, the client completes that flow with
-   that revision and stops. A revision whose wrap does not open in that flow counts as garbage.
+   that revision and stops, pushing at one more than the greater of that revision's generation and
+   the accepted generation. A revision whose wrap does not open in that flow counts as garbage.
    Recovery continues past an unknown `wrap_nonce` only after the flow fails and the user confirms
    that no credential change was made; one confirmation covers every unknown `wrap_nonce` in that
    run.
@@ -382,7 +390,8 @@ On an integrity error the client keeps its local file, reports the error, and st
 4. Merges the local body into it and pushes it at its generation plus one, with `If-Match` set to
    the current `ETag`.
 5. When no revision qualifies, pushes the local file at the accepted generation plus one (or at
-   generation 1 when there is no accepted generation), with the same `If-Match`.
+   generation 1 when there is no accepted generation), with the same `If-Match`, or with
+   `If-None-Match: *` when the server holds no revision.
 
 A garbage file, whatever generation its header claims, never opens and is never chosen, so it
 cannot raise the generation of the vault. A re-pushed old revision loses to the honest revision
@@ -403,7 +412,8 @@ same.
 
 It runs only online:
 
-1. Sync, as above.
+1. Sync, as above. When that sync finds a credential change on another device, the command stops
+   and reports it; the user runs `vault sync` to take the change over before changing credentials.
 2. Build the new file at the synced generation plus one, and send `PUT /v1/vault` with `If-Match`
    set to the synced file's `ETag`.
 3. On `412`, pull and run the checks of sync step 2. When the remote `wrap_nonce` is still the old
@@ -414,9 +424,10 @@ It runs only online:
 With `--new-secret-key`, the client stores the new secret key as pending and prints the new
 emergency kit before step 2. It keeps the old secret key until the push is confirmed. When the
 outcome of the push is unknown (a lost response or a crash), the next sync tries both keys on the
-remote and keeps the one that opens it. When the old key opens it, the push did not land; the
-client reports that the newly printed emergency kit is void and that `--new-secret-key` must run
-again.
+remote and keeps the one that opens it. A remote that still carries the current `wrap_nonce` shows,
+without any key derivation, that the push did not land. When the old key opens it, the push did not
+land; the client reports that the newly printed emergency kit is void and that `--new-secret-key`
+must run again.
 
 ### Credential change on another device
 
@@ -442,6 +453,14 @@ build a valid-looking file under the old wrap; the retired list keeps every clie
 it, including after `--rekey`, where the old password still opens the old wrap.
 
 Restoring a revision written before a credential change needs the credentials of that revision.
+With each retired `wrap_nonce` the client records the lowest server revision ID under the wrap
+that replaced it. A restore refuses a revision under a retired `wrap_nonce` whose ID is above
+that record, because only a holder of the old credentials can have written it, and refuses every
+revision under a retired `wrap_nonce` whose record is missing.
+
+A restore of the whole vault makes the local body match the revision: items the revision holds are
+restored, and local items it does not hold are deleted as local edits. The client shows the numbers
+of items added, changed, and removed, and asks for confirmation, before it saves.
 
 ## Server API
 

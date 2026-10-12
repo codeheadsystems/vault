@@ -472,6 +472,15 @@ fn vault_file() {
     for (name, p, test_kdf, body) in [
         ("test parameters, empty body", TEST, true, Body::default()),
         ("test parameters, one login", TEST, true, one_item.clone()),
+        (
+            "test parameters, controls escaped in the body JSON",
+            TEST,
+            true,
+            body_of(&json!({"v": 1, "horizon": 0, "tombstones": [],
+                "items": [with(note(&id(2), NOW, DEV_A, &[]), "notes",
+                    json!("tab\t del\u{7f} c1\u{85}\u{9f} nbsp\u{a0} ls\u{2028} ps\u{2029} nl\n"))],
+                "c1\u{80}key": "\u{1}"})),
+        ),
         ("floor parameters, one login", FLOOR, false, one_item),
     ] {
         let sk = SecretKey::from_bytes(secret_key());
@@ -892,6 +901,60 @@ fn merge_file() {
             NOW,
         ),
         merge_case(
+            "origin travels with the winning item, verbatim",
+            body(
+                0,
+                vec![with(
+                    login(&i1, 100, DEV_A, "pw", &[]),
+                    "origin",
+                    json!({"bitwarden": {"id": "local", "fields": [{"type": 3, "value": null}]}}),
+                )],
+                vec![],
+            ),
+            body(
+                0,
+                vec![with(
+                    login(&i1, 200, DEV_B, "pw", &[]),
+                    "origin",
+                    json!({"bitwarden": {"id": "remote", "n": [1, {}]}, "other": {}}),
+                )],
+                vec![],
+            ),
+            NOW,
+        ),
+        merge_case(
+            "an unknown type keeps a non-object origin, unchecked",
+            body(
+                0,
+                vec![with(card(&i1, 300, DEV_A, 1), "origin", json!("x"))],
+                vec![],
+            ),
+            body(
+                0,
+                vec![with(
+                    card(&i1, 200, DEV_B, 2),
+                    "origin",
+                    json!([1, {"a": null}]),
+                )],
+                vec![],
+            ),
+            NOW,
+        ),
+        merge_case(
+            "a winner without origin does not take the loser's",
+            body(
+                0,
+                vec![with(
+                    login(&i1, 100, DEV_A, "pw", &[]),
+                    "origin",
+                    json!({"bitwarden": {}}),
+                )],
+                vec![],
+            ),
+            body(0, vec![login(&i1, 200, DEV_B, "pw", &[])], vec![]),
+            NOW,
+        ),
+        merge_case(
             "a login that loses to a note loses its password",
             body(0, vec![login(&i1, 100, DEV_A, "pw", &[])], vec![]),
             body(0, vec![note(&i1, 200, DEV_B, &[])], vec![]),
@@ -1008,6 +1071,17 @@ fn edit_cases() -> Vec<Value> {
             "restore",
             body(0, vec![login(&i1, 40, DEV_A, "B", &[("A", 40)])], vec![]),
             json!({"item": login(&i1, 10, DEV_B, "A", &[])}),
+            NOW,
+        ),
+        edit_case(
+            "restore merges password histories",
+            "restore",
+            body(
+                0,
+                vec![login(&i1, 40, DEV_A, "p3", &[("p2", 30), ("p1", 20)])],
+                vec![],
+            ),
+            json!({"item": login(&i1, 10, DEV_B, "p1", &[("p0", 5)])}),
             NOW,
         ),
         edit_case(
@@ -1614,6 +1688,17 @@ fn malformed_file() {
         (
             "-0",
             r#"{"horizon":0,"items":[],"tombstones":[],"v":1,"x":-0}"#.to_owned(),
+        ),
+        (
+            "an origin that is not an object",
+            doc(&item(&id(1)).replace(r#""name":"n""#, r#""name":"n","origin":"x""#)),
+        ),
+        (
+            "an origin that is not an object, on a note",
+            doc(
+                &serde_json::to_string(&with(note(&id(1), 5, DEV_A, &[]), "origin", json!("x")))
+                    .unwrap(),
+            ),
         ),
         (
             "an upper-case UUID",

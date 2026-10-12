@@ -4,7 +4,8 @@
 //! The parser rejects a byte order mark, a duplicate key in any object, nesting deeper than 32
 //! levels, and any number that is not an integer in `[0, 2^53)` written without a fraction or
 //! exponent. The writer emits compact JSON with object keys in byte order, so equal values always
-//! produce equal bytes.
+//! produce equal bytes, and escapes every control character (U+0000 to U+001F, DEL, and U+0080 to
+//! U+009F) and U+2028 and U+2029, so its output is safe to print to a terminal.
 //!
 //! [`Value`] has no `Debug`, because a body value holds passwords, and it zeroizes its strings and
 //! object keys when dropped.
@@ -224,29 +225,42 @@ fn encoded_len(v: &Value) -> usize {
     }
 }
 
-/// The escape for a byte, as serde_json writes it: two-character escapes for `"`, `\`, and the
-/// common controls, `\u00XX` for other control characters, and the byte itself otherwise.
-fn escape(b: u8) -> Option<&'static [u8]> {
-    Some(match b {
-        b'"' => b"\\\"",
-        b'\\' => b"\\\\",
-        0x08 => b"\\b",
-        0x0c => b"\\f",
-        b'\n' => b"\\n",
-        b'\r' => b"\\r",
-        b'\t' => b"\\t",
-        0x00..=0x1f => b"\\u00",
-        _ => return None,
-    })
+/// How the writer spells one character of a string.
+enum Escape {
+    /// A two-character escape: `\"`, `\\`, `\b`, `\f`, `\n`, `\r`, or `\t`.
+    Short(&'static [u8]),
+    /// `\uXXXX` with lowercase hex.
+    Unicode(u32),
+    /// The character itself, as UTF-8.
+    Literal,
+}
+
+/// The escape for a character. Besides what JSON requires (`"`, `\`, and U+0000 to U+001F), the
+/// writer escapes DEL and the C1 controls (U+007F to U+009F) and U+2028 and U+2029, so that JSON
+/// printed to a terminal carries no raw control character.
+fn escape(c: char) -> Escape {
+    match c {
+        '"' => Escape::Short(b"\\\""),
+        '\\' => Escape::Short(b"\\\\"),
+        '\u{8}' => Escape::Short(b"\\b"),
+        '\u{c}' => Escape::Short(b"\\f"),
+        '\n' => Escape::Short(b"\\n"),
+        '\r' => Escape::Short(b"\\r"),
+        '\t' => Escape::Short(b"\\t"),
+        '\u{0}'..='\u{1f}' | '\u{7f}'..='\u{9f}' | '\u{2028}' | '\u{2029}' => {
+            Escape::Unicode(c as u32)
+        }
+        _ => Escape::Literal,
+    }
 }
 
 fn str_len(s: &str) -> usize {
     2 + s
-        .bytes()
-        .map(|b| match escape(b) {
-            Some(e) if e.len() == 4 => 6,
-            Some(e) => e.len(),
-            None => 1,
+        .chars()
+        .map(|c| match escape(c) {
+            Escape::Short(e) => e.len(),
+            Escape::Unicode(_) => 6,
+            Escape::Literal => c.len_utf8(),
         })
         .sum::<usize>()
 }
@@ -289,15 +303,19 @@ fn write(v: &Value, out: &mut Vec<u8>) {
 fn write_str(s: &str, out: &mut Vec<u8>) {
     const HEX: &[u8; 16] = b"0123456789abcdef";
     out.push(b'"');
-    for b in s.bytes() {
-        match escape(b) {
-            Some(e) if e.len() == 4 => {
-                out.extend_from_slice(e);
-                out.push(HEX[(b >> 4) as usize]);
-                out.push(HEX[(b & 15) as usize]);
+    for c in s.chars() {
+        match escape(c) {
+            Escape::Short(e) => out.extend_from_slice(e),
+            Escape::Unicode(u) => {
+                out.extend_from_slice(b"\\u");
+                for shift in [12, 8, 4, 0] {
+                    out.push(HEX[((u >> shift) & 15) as usize]);
+                }
             }
-            Some(e) => out.extend_from_slice(e),
-            None => out.push(b),
+            Escape::Literal => {
+                let mut buf = [0u8; 4];
+                out.extend_from_slice(c.encode_utf8(&mut buf).as_bytes());
+            }
         }
     }
     out.push(b'"');
@@ -381,5 +399,16 @@ pub(crate) mod tests {
     fn writer_escapes() {
         let v = Value::String("\"\\\u{1}/".into());
         assert_eq!(text(&v), r#""\"\\\u0001/""#);
+        // DEL, the C1 controls, and U+2028 and U+2029 are escaped; U+00A0 and other text is not.
+        let v = Value::String("a\u{7f}\u{80}\u{9f}\u{a0}\u{2028}\u{2029}\u{e9}\u{1f600}".into());
+        assert_eq!(
+            text(&v),
+            "\"a\\u007f\\u0080\\u009f\u{a0}\\u2028\\u2029\u{e9}\u{1f600}\""
+        );
+        // The length is exact, and the text reads back as the same value.
+        assert_eq!(to_vec(&v).len(), encoded_len(&v));
+        assert!(parse(&to_vec(&v)).unwrap() == v);
+        let key = Value::Object(Map::from([("\u{85}".to_owned(), Value::Null)]));
+        assert_eq!(text(&key), "{\"\\u0085\":null}");
     }
 }

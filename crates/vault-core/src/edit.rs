@@ -118,24 +118,28 @@ pub fn delete_item(body: &mut Body, id: &str, now: u64, device_id: &[u8; 16]) ->
 }
 
 /// Restores one item from an older revision: a copy of `old`, stamped, replaces the item or
-/// tombstone with its `id`. A restore is a local edit, so when the current item is a login whose
-/// password differs from the restored one, the current password joins the restored item's
-/// history with `retired = now`; the history is then normalised.
+/// tombstone with its `id`. When the item exists, the restored item's history is the union of
+/// `old`'s history, the existing item's history, and the existing item's login password with
+/// `retired = now` when it differs from the restored one. Stamping normalises the history, which
+/// drops the restored password itself.
 pub fn restore_item(body: &mut Body, old: &Item, now: u64, device_id: &[u8; 16]) {
     let mut item = old.clone();
-    let current = body
-        .item(&old.id)
-        .and_then(Item::login)
-        .map(|l| l.password.clone());
-    if let (Some(current), Some(restored)) = (current, item.login().map(|l| l.password.clone()))
-        && current != restored
+    let restored = item.login().map(|l| l.password.clone());
+    if let Some(existing) = body.item(&old.id).and_then(Item::fields)
         && let ItemData::Known(f) = &mut item.data
     {
-        f.password_history.push(HistoryEntry {
-            password: current,
-            retired: now,
-            extra: Map::new(),
-        });
+        // The revision's entries come first, so on equal `retired` they are kept.
+        f.password_history
+            .extend(existing.password_history.iter().cloned());
+        if let Some(current) = existing.login.as_ref().map(|l| &l.password)
+            && Some(current) != restored.as_ref()
+        {
+            f.password_history.push(HistoryEntry {
+                password: current.clone(),
+                retired: now,
+                extra: Map::new(),
+            });
+        }
     }
     body.items.retain(|i| i.id != old.id);
     body.tombstones.retain(|t| t.id != old.id);
@@ -291,6 +295,20 @@ mod tests {
     }
 
     #[test]
+    fn edits_keep_origin() {
+        let mut b = body();
+        let mut origin = Map::new();
+        origin.insert("bitwarden".into(), crate::json::Value::Number(7));
+        let mut f = b.items[0].fields().unwrap().clone();
+        f.origin = Some(origin.clone());
+        update_item(&mut b, ID1, f, 10, &DEV).unwrap();
+        let f = with_password(&b, "new");
+        update_item(&mut b, ID1, f, 20, &DEV).unwrap();
+        assert!(b.items[0].fields().unwrap().origin.as_ref() == Some(&origin));
+        assert!(b.to_checked_json().is_ok());
+    }
+
+    #[test]
     fn unknown_types_are_never_edited_but_may_be_deleted() {
         let j = format!(
             r#"{{"v":1,"horizon":0,"items":[{{"id":"{ID1}","type":"card","modified":1,"modified_by":"{DEV_A}"}}],"tombstones":[]}}"#
@@ -366,6 +384,39 @@ mod tests {
         let mut same = body();
         restore_item(&mut same, &old.items[0], 60, &DEV);
         assert!(same.items[0].fields().unwrap().password_history.is_empty());
+    }
+
+    #[test]
+    fn restore_merges_password_histories() {
+        let entry = |p: &str, r: u64| HistoryEntry {
+            password: p.into(),
+            retired: r,
+            extra: Map::new(),
+        };
+        // Local: p3 current, history [p2, p1]. Revision: p1 current, empty history.
+        let mut b = body();
+        let mut f = with_password(&b, "p3");
+        f.password_history = vec![entry("p2", 20), entry("p1", 10)];
+        b.items[0].data = ItemData::Known(Box::new(f));
+        let mut old = body().items[0].clone();
+        let mut of = with_password(&body(), "p1");
+        of.password_history = vec![entry("p0", 5)];
+        old.data = ItemData::Known(Box::new(of));
+        restore_item(&mut b, &old, 60, &DEV);
+        let i = &b.items[0];
+        assert_eq!(i.login().unwrap().password, "p1");
+        let h: Vec<(&str, u64)> = i
+            .fields()
+            .unwrap()
+            .password_history
+            .iter()
+            .map(|e| (e.password.as_str(), e.retired))
+            .collect();
+        assert_eq!(
+            h,
+            [("p3", 60), ("p2", 20), ("p0", 5)],
+            "p1 is dropped as the current one"
+        );
     }
 
     #[test]

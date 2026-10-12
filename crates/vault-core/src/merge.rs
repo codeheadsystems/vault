@@ -399,6 +399,33 @@ mod tests {
     }
 
     #[test]
+    fn origin_travels_with_the_winning_item() {
+        let with_origin = |m: u64, by: &str, src: &str| {
+            login(ID1, m, by, "pw", &[]).replace(
+                r#""name":"n""#,
+                &format!(r#""name":"n","origin":{{"bitwarden":{{"src":"{src}"}}}}"#),
+            )
+        };
+        let l = body(0, &[with_origin(100, DEV_A, "local")], &[], "");
+        let r = body(0, &[with_origin(200, DEV_B, "remote")], &[], "");
+        let m = merge(&l, &r, NOW);
+        let o = m
+            .body
+            .item(ID1)
+            .unwrap()
+            .fields()
+            .unwrap()
+            .origin
+            .clone()
+            .unwrap();
+        assert!(o["bitwarden"] == json::parse(br#"{"src":"remote"}"#).unwrap());
+        // A winner without `origin` does not take the loser's.
+        let r = body(0, &[login(ID1, 200, DEV_B, "pw", &[])], &[], "");
+        let m = merge(&l, &r, NOW);
+        assert!(m.body.item(ID1).unwrap().fields().unwrap().origin.is_none());
+    }
+
+    #[test]
     fn same_password_adds_nothing() {
         let l = body(0, &[login(ID1, 100, DEV_A, "same", &[])], &[], "");
         let r = body(0, &[login(ID1, 200, DEV_B, "same", &[])], &[], "");

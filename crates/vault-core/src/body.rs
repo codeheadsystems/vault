@@ -83,6 +83,10 @@ pub struct ItemFields {
     pub created: u64,
     /// Present on a login item, and `None` on a note, whose `login` key is an unknown field.
     pub login: Option<Login>,
+    /// Present only on imported items: data from the source that has no key in the schema, one
+    /// object per source such as `bitwarden`. Its contents are never checked and are kept
+    /// verbatim.
+    pub origin: Option<Map>,
     /// Unknown fields.
     pub extra: Map,
 }
@@ -195,7 +199,17 @@ macro_rules! wipe_on_drop {
 
 wipe_on_drop!(Body, [], [extra]);
 wipe_on_drop!(Item, [id, item_type, modified_by, review], []);
-wipe_on_drop!(ItemFields, [name, folder, notes], [extra]);
+impl Drop for ItemFields {
+    fn drop(&mut self) {
+        self.name.zeroize();
+        self.folder.zeroize();
+        self.notes.zeroize();
+        if let Some(o) = &mut self.origin {
+            wipe_keys(o);
+        }
+        wipe_keys(&mut self.extra);
+    }
+}
 wipe_on_drop!(CustomField, [name, value], [extra]);
 wipe_on_drop!(HistoryEntry, [password], [extra]);
 wipe_on_drop!(Login, [username, password, totp], [extra]);
@@ -558,6 +572,8 @@ fn fields_from_map(mut m: Map, is_login: bool) -> Result<ItemFields> {
     } else {
         None
     };
+    // `origin` is optional and must be an object; its contents are kept without checks.
+    let origin = m.remove("origin").map(object).transpose()?;
     Ok(ItemFields {
         name,
         folder,
@@ -567,6 +583,7 @@ fn fields_from_map(mut m: Map, is_login: bool) -> Result<ItemFields> {
         password_history,
         created,
         login,
+        origin,
         extra: m,
     })
 }
@@ -668,6 +685,9 @@ impl ItemFields {
         m.insert("created".into(), Value::Number(self.created));
         if let Some(l) = &self.login {
             m.insert("login".into(), l.to_value());
+        }
+        if let Some(o) = &self.origin {
+            m.insert("origin".into(), Value::Object(o.clone()));
         }
         m
     }
@@ -870,6 +890,88 @@ pub(crate) mod tests {
         }
         assert!(Body::from_json(&b.to_json()).unwrap() == b);
         assert!(b.to_checked_json().is_ok());
+    }
+
+    #[test]
+    fn origin_is_an_object_kept_verbatim() {
+        let origin = r#""origin":{"bitwarden":{"id":"x","fields":[{"type":3,"n":null}],"z":{}}}"#;
+        let item = login_json(ID1, 5, DEV_A, "pw")
+            .replace(r#""name":"n""#, &format!(r#""name":"n",{origin}"#));
+        let b = Body::from_json(body_with(std::slice::from_ref(&item)).as_bytes()).unwrap();
+        let f = b.items[0].fields().unwrap();
+        assert!(f.origin.as_ref().unwrap().contains_key("bitwarden"));
+        assert!(!f.extra.contains_key("origin"));
+        let back = json::parse(&b.to_json()).unwrap();
+        let Value::Object(top) = &back else { panic!() };
+        let Value::Array(items) = &top["items"] else {
+            panic!()
+        };
+        let Value::Object(it) = &items[0] else {
+            panic!()
+        };
+        let want = json::parse(format!("{{{origin}}}").as_bytes()).unwrap();
+        let Value::Object(want) = &want else { panic!() };
+        assert!(it["origin"] == want["origin"], "kept verbatim");
+        assert!(b.to_checked_json().is_ok());
+        // On a note too.
+        let note = item.replace(r#""type":"login""#, r#""type":"note""#);
+        assert!(
+            Body::from_json(body_with(&[note]).as_bytes())
+                .unwrap()
+                .items[0]
+                .fields()
+                .unwrap()
+                .origin
+                .is_some()
+        );
+        // Absent is fine, and stays absent.
+        let plain =
+            Body::from_json(body_with(&[login_json(ID1, 5, DEV_A, "pw")]).as_bytes()).unwrap();
+        assert!(plain.items[0].fields().unwrap().origin.is_none());
+        assert!(
+            !String::from_utf8(plain.to_json().to_vec())
+                .unwrap()
+                .contains("origin")
+        );
+    }
+
+    #[test]
+    fn origin_that_is_not_an_object_is_an_integrity_error() {
+        for bad in [r#""x""#, "[]", "null", "1", "true"] {
+            let item = login_json(ID1, 5, DEV_A, "pw")
+                .replace(r#""name":"n""#, &format!(r#""name":"n","origin":{bad}"#));
+            assert_eq!(
+                err(&body_with(std::slice::from_ref(&item))),
+                Some(K::WrongType),
+                "{bad}"
+            );
+            let note = item.replace(r#""type":"login""#, r#""type":"note""#);
+            assert_eq!(
+                err(&body_with(&[note])),
+                Some(K::WrongType),
+                "{bad} on a note"
+            );
+        }
+        // An item of unknown type keeps any `origin`, unchecked.
+        let card = format!(
+            r#"{{"id":"{ID1}","type":"card","modified":1,"modified_by":"{DEV_A}","origin":"x"}}"#
+        );
+        assert_eq!(err(&body_with(&[card])), None);
+    }
+
+    #[test]
+    fn a_body_with_a_bad_origin_is_never_written() {
+        let mut b =
+            Body::from_json(body_with(&[login_json(ID1, 5, DEV_A, "pw")]).as_bytes()).unwrap();
+        b.items[0]
+            .fields_mut()
+            .unwrap()
+            .extra
+            .insert("origin".into(), Value::String("x".into()));
+        assert_eq!(
+            b.to_checked_json().err(),
+            Some(Error::InvalidInput(InputKind::Body))
+        );
     }
 
     #[test]

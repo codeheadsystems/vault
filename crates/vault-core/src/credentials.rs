@@ -36,7 +36,8 @@ pub struct NewVault {
 }
 
 /// Creates a vault for `vault init`. The password must meet the password-setting rules and the
-/// parameters must be within the bounds.
+/// parameters must be within the bounds. The file is sealed by [`seal_file`], which checks the
+/// body against every body rule first.
 ///
 /// Draws, in order: the secret key (16 bytes), `vault_id` (16), the vault key (32), `kdf_salt`
 /// (16), `wrap_nonce` (24), and `body_nonce` (24).
@@ -86,7 +87,8 @@ pub struct CredentialChange {
 /// Builds the new file for `vault passwd` from the synced header and the synced body: a new vault
 /// key, a new `kdf_salt`, a new `wrap_nonce`, a new wrap under the KEK from `password` and `sk`,
 /// and the body re-encrypted, at the synced generation plus one. `vault_id` stays the same. For
-/// `--new-secret-key`, `sk` is the new secret key.
+/// `--new-secret-key`, `sk` is the new secret key. A body that breaks a body rule is refused with
+/// [`crate::InputKind::Body`] before anything is sealed.
 ///
 /// Draws, in order: the vault key (32 bytes), `kdf_salt` (16), `wrap_nonce` (24), and
 /// `body_nonce` (24).
@@ -321,6 +323,34 @@ mod tests {
         assert_eq!(
             check_remote(&state, &forged).err(),
             Some(Error::Integrity(K::RetiredWrapNonce))
+        );
+    }
+
+    #[test]
+    fn a_credential_change_refuses_a_body_that_breaks_the_rules() {
+        let mut rng = CountingRng(31);
+        let v = create_vault(&mut rng, PW, FLOOR, false).unwrap();
+        let mut b = Body::from_json(
+            br#"{"v":1,"horizon":0,"items":[{"id":"00000000-0000-4000-8000-000000000001","type":"note","name":"n","folder":"","favourite":false,"notes":"","fields":[],"password_history":[],"created":0,"modified":1,"modified_by":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}],"tombstones":[]}"#,
+        )
+        .unwrap();
+        b.items[0].fields_mut().unwrap().name.clear();
+        assert_eq!(
+            change_credentials(
+                &mut rng,
+                &v.header,
+                &b,
+                PasswordChange::Kept(PW),
+                &v.secret_key,
+                FLOOR,
+                false
+            )
+            .err(),
+            Some(Error::InvalidInput(InputKind::Body))
+        );
+        assert_eq!(
+            crate::file::seal_file(&v.header, &v.vault_key, &[0; 24], &b).err(),
+            Some(Error::InvalidInput(InputKind::Body))
         );
     }
 

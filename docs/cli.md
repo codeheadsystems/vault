@@ -122,9 +122,9 @@ hint.
 
 ### Password generation
 
-`vault gen` prints a 20-character password from upper case, lower case, digits, and symbols,
-without the ambiguous characters `0O1lI|`. Options: `--length <n>`, `--no-upper`, `--no-digits`,
-`--no-symbols`, and `--ambiguous`. `--words <n>` prints a passphrase of `n` words (default 6) from
+`vault gen` prints a 25-character password from upper case, lower case, digits, and symbols,
+without the ambiguous characters `0O1lI`. Options: `--length <n>`, `--no-upper`, `--no-digits`,
+`--no-symbols`, and `--ambiguous`. `--words <n>` prints a passphrase of `n` words (default 7) from
 the BIP-39 English word list, separated by `--separator` (default `-`). The entropy in bits goes to
 standard error, or into the JSON result.
 
@@ -139,8 +139,8 @@ standard error, or into the JSON result.
 4. Generates the secret key, the device ID, and the vault, with `--kdf-memory 64`, `128`, or `256`
    MiB (default 64).
 5. Prints the emergency kit: the secret key text form and its QR code, the server URL, and the
-   vault ID. `--kit <file>` also writes it to a new mode `0600` file. The command then asks for the
-   last group of the secret key, to confirm the kit was kept.
+   vault ID, on standard error with `--json`. `--kit <file>` also writes it to a new mode `0600`
+   file. The command then asks for the last group of the secret key, to confirm the kit was kept.
 6. Stores the state and pushes generation 1 with `If-None-Match: *`.
 
 `vault setup`:
@@ -166,7 +166,8 @@ is the repair after a `401`.
 asks only for the new master password, so a live agent session can replace a forgotten one (the
 requirements' threat model accepts this). Without the agent, it asks for the current master
 password first. It ends the agent on success. `--new-secret-key` prints the new emergency kit and
-asks for its last group before it pushes.
+asks for its last group before it pushes; it also sets a new master password unless
+`--keep-password` is given.
 
 ### Import and export
 
@@ -188,8 +189,9 @@ mapping is in [Bitwarden import and export](bitwarden.md).
 | `json` | The vault body as the spec defines it |
 
 `bitwarden` and `json` are plaintext and need `--plaintext`. Output goes to standard output, or
-with `-o <file>` to a new file created with mode `0600`; an existing file is refused. A plaintext
-export prints a warning to standard error.
+with `-o <file>` to a new file created with mode `0600`; an existing file is refused. With
+`--json`, `-o` is required, and so it is for the binary `vault` format when standard output is a
+terminal. A plaintext export prints a warning to standard error.
 
 ### History and restore
 
@@ -209,6 +211,10 @@ confirmation unless `-y` is given, saves, and syncs.
 | `--json` | Prints one JSON object on standard output (see [JSON output](#json-output)) |
 | `--offline` | Contacts no server; writes stay local until a later sync |
 | `--password-fd <n>` | Reads the master password from file descriptor `n`, for scripts |
+
+The master password comes from `--password-fd`, or else from the terminal. Every other prompt reads
+the terminal when standard input is one, and otherwise the next line of standard input: the setup
+text, the secret key, the answers about the emergency kit, confirmations, and the export password.
 
 ## Files
 
@@ -249,9 +255,11 @@ change together. A write goes to a temporary file, which is synced with `fsync`,
 }
 ```
 
-- `retired` records, with each retired `wrap_nonce`, the ID of the server's current revision when
-  it was retired, read from `GET /v1/revisions` after the credential change. `vault restore` uses
-  it.
+- `retired` records, with each retired `wrap_nonce`, the lowest revision ID under the new
+  `wrap_nonce`, read from `GET /v1/revisions` after the change. After a change on another device
+  the client walks down from the revision it pulled while the retained revisions carry the new
+  `wrap_nonce`. The record is `null` when the list cannot be read, and `vault restore` then refuses
+  every revision under that `wrap_nonce`.
 - `refused` lists the `wrap_nonce` values whose wrap failed to open in the credential change on
   another device flow.
 - `secret_key_store` is `keyring` or `file`, chosen at `vault init` or `vault setup` and never
@@ -338,7 +346,7 @@ open the local file ends the agent and asks for the master password.
 
 When standard error is a terminal, a command prints at most one status line after its output, in
 this order of priority: dropped items, sync stopped (with the command that repairs it), unpushed
-changes older than one hour, and items flagged for review.
+changes when the last successful sync is more than an hour old, and items flagged for review.
 
 ### Server connection
 
@@ -352,6 +360,10 @@ validates the chain against the `webpki-roots` set. A `localhost` URL connects t
 - A vault file response over 16 MiB, or a revision list over 1 MiB, is an error.
 - Redirects are not followed, and proxy environment variables are ignored.
 - Strings from the server, such as token names in `vault history`, are escaped like item content.
+- Before it sends the token over plain `http` to a loopback port, the client looks up the socket
+  listening on that port in `/proc/net/tcp` and `/proc/net/tcp6`, and refuses when another user
+  than this one or root owns it. Another local user could otherwise bind the port while
+  `vault serve` is down and receive the token.
 
 ## Editor files
 
@@ -362,8 +374,9 @@ with `fstatfs` on that directory, and creates `item.toml` inside with `O_CREAT`,
 `O_NOFOLLOW`. The editor is `$VISUAL`, then `$EDITOR`, then `vi`, run as
 `sh -c '$VISUAL "$1"' sh <path>`.
 
-- Vi, Vim, and Neovim start with swap, backup, undo, and viminfo or ShaDa files and modelines
-  turned off.
+- Vim and Neovim, also as a `vi`, `view`, or `ex` that resolves to one of them through `$PATH`
+  and symbolic links, start with swap, backup, undo, and viminfo or ShaDa files and modelines
+  turned off. Other vi implementations, such as nvi and BusyBox vi, start without flags.
 - Emacs starts with backup files, auto-save, lock files, and file-local variables turned off.
 - Afterwards the file is overwritten with zeros and removed, and so is the directory, also when
   the editor fails.
@@ -373,8 +386,11 @@ Other editors may write backup or swap files of their own, inside or outside tha
 
 ## Output
 
-Item content and server strings printed to a terminal have control characters other than newline
-and tab escaped, on standard output and standard error. Output to a pipe or a file is unchanged.
+Text output is for display: item content and server strings have control characters other than
+newline and tab, the line and paragraph separators, and the format characters (Unicode category
+Cf, which includes the bidirectional controls) escaped as `\u{..}`, on standard output and
+standard error, also through a pipe. The JSON output and the files of `vault export` are data
+and are unchanged.
 Error messages never contain item content other than item names, key material, tokens, or setup
 text.
 
@@ -391,14 +407,20 @@ With `--json`, a command prints one JSON object and a newline on standard output
 | Command | `result` |
 | --- | --- |
 | `ls`, `find` | `{"items": [{"id", "type", "name", "folder", "username", "favourite", "review"}]}` |
-| `show` | The item, as the body schema defines it; with `--reveal` only, the values of `login.password`, `login.totp`, hidden fields, `password_history`, and `login.passkeys`, which are otherwise `null` |
+| `show` | The item, as the body schema defines it; with `--reveal` only, the values of `login.password`, `login.totp`, hidden fields, `password_history`, and `login.passkeys`, which are otherwise `null`; with `--field`, `{"id", "value"}`; with `-c`, `{"id", "copied"}`; an item of a type the client does not know is `{"id", "type"}` unless `--reveal` is given |
 | `add`, `edit`, `rm`, `mv` | `{"id", "synced"}` |
 | `gen` | `{"value", "bits"}` |
 | `sync` | `{"outcome": "up_to_date" \| "adopted" \| "pushed", "generation", "dropped": [names]}` |
-| `status` | `{"unlocked", "last_sync", "unpushed", "stopped", "review"}` |
+| `status` | `{"unlocked", "last_sync", "unpushed", "stopped", "review"}`; `review` is `null`, because counting flagged items needs the vault key and `status` never asks the agent for it |
 | `history` | `{"revisions": [...]}`, as `GET /v1/revisions` returns them |
 | `key show` | `{"secret_key"}` |
-| `import` | `{"added", "updated", "unchanged", "skipped"}` |
+| `import` | `{"added", "updated", "unchanged", "skipped", "synced"}` |
+| `init`, `setup` | `{"vault_id"}` |
+| `passwd` | `{"generation", "retired_revision"}` |
+| `restore` | `{"added", "changed", "removed", "synced"}` |
+| `unlock` | `{"unlocked"}`: whether an agent holds the key |
+| `lock` | `{"locked"}`: whether an agent was running |
+| `export` | `{"file"}` |
 
 `code` is a `vault-core` error code such as `integrity.bad_magic`, or one of the client's own:
 `item.not_found`, `item.ambiguous`, `auth.wrong_password`, `server.unreachable`,

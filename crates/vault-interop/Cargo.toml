@@ -1,0 +1,27 @@
+[package]
+name = "vault-interop"
+version = "0.1.0"
+description = "Bitwarden JSON import and export; no I/O"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+vault-core = { path = "../vault-core" }
+aes.workspace = true
+argon2.workspace = true
+base64ct.workspace = true
+cbc.workspace = true
+hkdf.workspace = true
+hmac = { workspace = true, features = ["zeroize"] }
+pbkdf2.workspace = true
+sha2 = { workspace = true, features = ["zeroize"] }
+zeroize.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

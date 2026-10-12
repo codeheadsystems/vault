@@ -1,0 +1,34 @@
+[package]
+name = "vault-client"
+version = "0.1.0"
+description = "vault client state and the sans-I/O sync, recovery, and credential change procedures"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[features]
+# Accept the test KDF parameter set, for the tests that unlock with typed credentials. Debug
+# builds only, as in vault-core. Never enable it through a dev-dependency: feature unification
+# would leak it into `cargo test --workspace` and break the release gates.
+insecure-test-kdf = ["vault-core/insecure-test-kdf"]
+
+[dependencies]
+vault-core = { path = "../vault-core" }
+hex.workspace = true
+zeroize.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "net", "io-util", "sync"] }
+vault-server = { path = "../vault-server" }
+
+[lints]
+workspace = true
+
+# Unlocking with typed credentials runs Argon2id, so these tests use the test KDF parameters.
+[[test]]
+name = "credentials"
+required-features = ["insecure-test-kdf"]

@@ -31,7 +31,9 @@ pub struct Unlocked {
 /// `body_ct = AEAD(K_body, body_nonce, u32(len(json)) || json || zero padding, ad = header)`.
 ///
 /// Refuses a header that does not decode, a body that breaks the body rules or has a `v` greater
-/// than this client implements, and a result over 16 MiB.
+/// than this client implements, and a result over 16 MiB. The body check re-reads the JSON the
+/// body serialises to under every body rule, so no client writes a file that a client cannot
+/// open; every path that produces a vault file goes through this function.
 pub fn seal_file(
     header: &Header,
     vk: &VaultKey,

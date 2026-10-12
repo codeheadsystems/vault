@@ -322,8 +322,13 @@ def parse_json(b):
 
 
 def dump(v):
-    """The writer's form: compact, keys in byte order, non-ASCII kept."""
-    return json.dumps(v, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
+    """The writer's form: compact, keys in byte order, non-ASCII kept, and DEL, the C1 controls,
+    U+2028, and U+2029 escaped as \\u with lowercase hex. json.dumps leaves those characters raw,
+    and they appear only inside strings, so replacing them in its output is exact."""
+    text = json.dumps(v, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    for c in [chr(x) for x in range(0x7F, 0xA0)] + ["\u2028", "\u2029"]:
+        text = text.replace(c, f"\\u{ord(c):04x}")
+    return text.encode()
 
 
 # Body schema
@@ -374,6 +379,8 @@ def check_item(it):
         return
     if "review" in it:
         need(it, "review", "string")
+    if "origin" in it:
+        need(it, "origin", "object")
     bound(need(it, "name", "string") != "")
     need(it, "folder", "string")
     need(it, "favourite", "bool")
@@ -510,11 +517,15 @@ def edit(body, action, args, now, device):
     elif action == "restore":
         old = json.loads(json.dumps(args["item"]))
         cur = find(old["id"])
-        # A restore is a local edit; one that changes login.password adds the previous one.
-        if (cur is not None and cur["type"] == "login" and old["type"] == "login"
-                and cur["login"]["password"] != old["login"]["password"]):
-            old["password_history"] = old["password_history"] + [
-                {"password": cur["login"]["password"], "retired": now}]
+        # When the item exists, the restored history is the union of the revision's history, the
+        # existing history, and the existing login.password (retired now) when it differs from
+        # the restored one; stamping normalises it, which drops the restored password.
+        if cur is not None and cur["type"] in KNOWN_TYPES and old["type"] in KNOWN_TYPES:
+            restored = old["login"]["password"] if old["type"] == "login" else None
+            extra = []
+            if cur["type"] == "login" and cur["login"]["password"] != restored:
+                extra = [{"password": cur["login"]["password"], "retired": now}]
+            old["password_history"] = old["password_history"] + cur["password_history"] + extra
         b["items"] = [x for x in items if x["id"] != old["id"]]
         b["tombstones"] = [x for x in b["tombstones"] if x["id"] != old["id"]]
         stamp(old, now, device)

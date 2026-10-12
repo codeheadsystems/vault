@@ -2,6 +2,13 @@
 
 [graph]
 all-features = true
+# The platforms vault builds for; Windows-only dependencies are out of scope.
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+    "x86_64-unknown-freebsd",
+    "wasm32-unknown-unknown",
+]
 
 [licenses]
 allow = [
@@ -16,6 +23,11 @@ allow = [
 ]
 confidence-threshold = 0.93
 
+# The Mozilla root set the CLI trusts for a publicly trusted certificate (requirements: Licence).
+[[licenses.exceptions]]
+crate = "webpki-roots"
+allow = ["CDLA-Permissive-2.0"]
+
 [advisories]
 yanked = "deny"
 
@@ -23,6 +35,12 @@ yanked = "deny"
 multiple-versions = "warn"
 wildcards = "deny"
 allow-wildcard-paths = true
+# rustls uses the ring provider; aws-lc carries the OpenSSL licence.
+deny = [
+    { crate = "aws-lc-sys" },
+    { crate = "aws-lc-rs" },
+    { crate = "openssl-sys" },
+]
 
 [sources]
 unknown-registry = "deny"

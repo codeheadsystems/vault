@@ -1,5 +1,9 @@
 //! Errors. Variants carry no strings or bytes from their inputs, so no password, item content, or
 //! key material can reach an error message.
+//!
+//! The strings that [`Error::code`], [`IntegrityKind::code`], and [`InputKind::code`] return are a
+//! public interface: `spec/vectors/` and the CLI's JSON output (`docs/cli.md`) carry them. A code is
+//! never renamed or removed; a new rule gets a new code.
 
 use core::fmt;
 
@@ -68,7 +72,8 @@ pub enum IntegrityKind {
     Number,
     /// A key the schema requires is missing.
     MissingKey,
-    /// A key the schema defines has a value of the wrong JSON type.
+    /// A key the schema defines has a value of the wrong JSON type, such as an `origin` that is
+    /// not an object.
     WrongType,
     /// A value is outside the bounds the schema states.
     BadValue,
@@ -179,7 +184,8 @@ impl InputKind {
 
 impl Error {
     /// The stable name of the error, as `spec/vectors/` and other clients spell it: for example
-    /// `integrity.bad_magic`, `input.password_too_short`, or `wrong_credentials`.
+    /// `integrity.bad_magic`, `input.password_too_short`, or `wrong_credentials`. Codes are never
+    /// renamed or removed, only added.
     pub fn code(self) -> &'static str {
         match self {
             Error::Integrity(k) => k.code(),

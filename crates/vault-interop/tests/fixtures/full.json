@@ -1,0 +1,205 @@
+{
+  "encrypted": false,
+  "folders": [
+    { "id": "6a7b8c9d-0000-4000-8000-0000000f0001", "name": "Work" },
+    { "id": "6a7b8c9d-0000-4000-8000-0000000f0002", "name": "Work/AWS" }
+  ],
+  "collections": [
+    {
+      "id": "6a7b8c9d-0000-4000-8000-00000000c011",
+      "organizationId": "6a7b8c9d-0000-4000-8000-0000000000a1",
+      "name": "Shared",
+      "externalId": null
+    }
+  ],
+  "items": [
+    {
+      "passwordHistory": [
+        { "lastUsedDate": "2024-03-10T12:30:45.678Z", "password": "old-2" },
+        { "lastUsedDate": "1969-07-20T20:17:40.000Z", "password": "moon" },
+        { "lastUsedDate": null, "password": "undated" }
+      ],
+      "revisionDate": "2024-03-15T08:00:00.250Z",
+      "creationDate": "2024-03-14T15:09:26.535Z",
+      "deletedDate": null,
+      "id": "5f0e2a61-1c4b-4e7a-9d0c-7a3e2b1c0001",
+      "organizationId": null,
+      "folderId": "6a7b8c9d-0000-4000-8000-0000000f0002",
+      "type": 1,
+      "reprompt": 1,
+      "name": "AWS console",
+      "notes": "Root account.\nUse the hardware key.",
+      "favorite": true,
+      "fields": [
+        { "name": "Account ID", "value": "123456789012", "type": 0, "linkedId": null },
+        { "name": "Recovery code", "value": "abcd-efgh", "type": 1, "linkedId": null },
+        { "name": "MFA enabled", "value": "true", "type": 2, "linkedId": null },
+        { "name": "Shared", "value": null, "type": 2, "linkedId": null },
+        { "name": "Login name", "value": null, "type": 3, "linkedId": 100 }
+      ],
+      "login": {
+        "fido2Credentials": [
+          {
+            "credentialId": "b64:AAECAwQFBgcICQ",
+            "keyType": "public-key",
+            "keyAlgorithm": "ECDSA",
+            "keyCurve": "P-256",
+            "keyValue": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQg",
+            "rpId": "aws.amazon.com",
+            "userHandle": "dXNlcg",
+            "userName": "root",
+            "counter": "0",
+            "rpName": "AWS",
+            "userDisplayName": "Root",
+            "discoverable": "true",
+            "creationDate": "2024-03-14T15:09:26.535Z"
+          }
+        ],
+        "uris": [
+          { "match": null, "uri": "https://console.aws.amazon.com" },
+          { "match": 0, "uri": "https://aws.amazon.com" },
+          { "match": 1, "uri": "https://signin.aws.amazon.com" },
+          { "match": 2, "uri": "https://console.aws.amazon.com/iam" },
+          { "match": 3, "uri": "https://console.aws.amazon.com/billing/home" },
+          { "match": 4, "uri": "^https://[a-z0-9-]+\\.signin\\.aws\\.amazon\\.com/" },
+          { "match": 5, "uri": "https://example.invalid" }
+        ],
+        "username": "root@example.com",
+        "password": "correct-password",
+        "totp": "otpauth://totp/AWS:root?secret=KRSXG5CTMVRXEZLU&issuer=AWS",
+        "passwordRevisionDate": "2024-03-10T12:30:45.678Z",
+        "autofillOnPageLoad": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2024-02-01T09:00:00.000Z",
+      "creationDate": "2024-02-01T09:00:00.000Z",
+      "deletedDate": null,
+      "id": "5f0e2a61-1c4b-4e7a-9d0c-7a3e2b1c0002",
+      "organizationId": null,
+      "folderId": null,
+      "type": 2,
+      "reprompt": 0,
+      "name": null,
+      "notes": "Wi-Fi: guest / hunter2",
+      "favorite": false,
+      "secureNote": { "type": 0 },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2024-02-02T09:00:00.000Z",
+      "creationDate": "2024-02-02T09:00:00.000Z",
+      "deletedDate": null,
+      "id": "5f0e2a61-1c4b-4e7a-9d0c-7a3e2b1c0003",
+      "organizationId": null,
+      "folderId": "6a7b8c9d-0000-4000-8000-0000000f0001",
+      "type": 3,
+      "reprompt": 0,
+      "name": "Visa",
+      "notes": null,
+      "favorite": false,
+      "fields": [
+        { "name": "PIN", "value": "1234", "type": 1, "linkedId": null }
+      ],
+      "card": {
+        "cardholderName": "Jane Doe",
+        "expMonth": "4",
+        "expYear": "2030",
+        "code": "123",
+        "brand": "Visa",
+        "number": "4242424242424242"
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2024-02-03T09:00:00.000Z",
+      "creationDate": "2024-02-03T09:00:00.000Z",
+      "deletedDate": null,
+      "id": "5f0e2a61-1c4b-4e7a-9d0c-7a3e2b1c0004",
+      "organizationId": null,
+      "folderId": null,
+      "type": 4,
+      "reprompt": 0,
+      "name": "Jane",
+      "notes": null,
+      "favorite": false,
+      "identity": {
+        "title": "Dr",
+        "firstName": "Jane",
+        "middleName": null,
+        "lastName": "Doe",
+        "address1": "1 Main St",
+        "address2": null,
+        "address3": null,
+        "city": "Springfield",
+        "state": null,
+        "postalCode": "12345",
+        "country": "US",
+        "company": null,
+        "email": "jane@example.com",
+        "phone": null,
+        "ssn": "000-12-3456",
+        "username": "jdoe",
+        "passportNumber": "X1234567",
+        "licenseNumber": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2024-02-04T09:00:00.000Z",
+      "creationDate": "2024-02-04T09:00:00.000Z",
+      "deletedDate": null,
+      "id": "5f0e2a61-1c4b-4e7a-9d0c-7a3e2b1c0005",
+      "organizationId": null,
+      "folderId": null,
+      "type": 5,
+      "reprompt": 0,
+      "name": "Deploy key",
+      "notes": null,
+      "favorite": false,
+      "sshKey": {
+        "privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAA\n-----END OPENSSH PRIVATE KEY-----\n",
+        "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExample",
+        "keyFingerprint": "SHA256:47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU"
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2024-02-05T09:00:00.000Z",
+      "creationDate": "2024-02-05T09:00:00.000Z",
+      "deletedDate": "2024-02-06T09:00:00.000Z",
+      "id": "5f0e2a61-1c4b-4e7a-9d0c-7a3e2b1c0006",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Old forum",
+      "notes": null,
+      "favorite": false,
+      "login": { "uris": [], "username": "me", "password": "pw", "totp": null },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2024-02-07T09:00:00.000Z",
+      "creationDate": "2024-02-07T09:00:00.000Z",
+      "deletedDate": null,
+      "id": "5f0e2a61-1c4b-4e7a-9d0c-7a3e2b1c0008",
+      "organizationId": null,
+      "folderId": null,
+      "type": 8,
+      "reprompt": 0,
+      "name": "Passport",
+      "notes": null,
+      "favorite": false,
+      "passport": { "surname": "Doe", "givenName": "Jane", "passportNumber": "X1234567" },
+      "collectionIds": null
+    }
+  ]
+}
