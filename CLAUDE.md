@@ -16,6 +16,38 @@ bytes and never holds a key. The project is MIT licensed.
 The spec is normative. Where code and spec disagree, the code is wrong until a spec change is
 proposed and approved. Every format change updates the spec and the test vectors in the same commit.
 
+## Repository layout
+
+| Path | Contents |
+| --- | --- |
+| `crates/vault-core/` | Keys, vault file, body schema, merge rule, and sync decisions; no I/O, builds for WASM |
+| `crates/vault-core/tests/` | Merge property tests and the release gate for the test KDF parameters |
+| `.github/workflows/ci.yml` | Format, lint, test, WASM build, `cargo-deny`, and `cargo-audit` |
+| `deny.toml` | Allowed licences and sources for `cargo-deny` |
+| `rust-toolchain.toml` | Rust 1.96.0 with the `wasm32-unknown-unknown` target |
+
+`vault-core` reads no clock and no operating system randomness: the caller passes `now` in ms and
+an `Rng`. Code that departs from a literal reading of the spec, or reads an ambiguous passage one
+way, carries a `// SPEC-QUESTION:` comment.
+
+## Commands
+
+| Command | Purpose |
+| --- | --- |
+| `cargo fmt --all --check` | Formatting |
+| `cargo clippy --workspace --all-targets -- -D warnings` | Lints |
+| `cargo test --workspace` | Unit, property, and release gate tests |
+| `VAULT_EXPECT_TEST_KDF=1 cargo test -p vault-core --features insecure-test-kdf` | Tests with the test KDF parameters accepted |
+| `cargo test -p vault-core --release --test release_gate` | Release build refuses `test_kdf` headers |
+| `cargo build -p vault-core --target wasm32-unknown-unknown --release` | WASM build |
+| `cargo deny check` | Licences, advisories, and sources |
+
+The `insecure-test-kdf` feature accepts the test KDF parameters. A build without
+`debug_assertions` fails to compile with it, and no crate enables it through a dev-dependency.
+`tests/release_gate.rs` fails when the feature is on unless `VAULT_EXPECT_TEST_KDF=1` is set, so a
+leak through feature unification fails `cargo test --workspace`. Proptest failure seeds in
+`crates/vault-core/tests/merge_props.proptest-regressions` are committed.
+
 ## Phasing
 
 1. Format spec and `vault-core`.

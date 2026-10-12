@@ -70,10 +70,12 @@ KEK    = HKDF(ikm = pw_key || secret_key, salt = vault_id, info = "vault/v1/kek"
 ```
 
 The **key-encryption key** (KEK) needs both the master password and the secret key. The master
-password is not trimmed. Setting a password (`vault init`, `vault passwd`) requires at least 12
-Unicode scalar values after NFKC normalisation and rejects code points unassigned in the client's
-Unicode tables, because NFKC is stable across Unicode versions only for assigned code points.
-Unlocking applies neither rule.
+password is not trimmed, and is at most 4,096 bytes of UTF-8 before normalisation, which bounds the
+memory NFKC can need; a longer input is refused at unlock and when setting a password. Setting a
+password (`vault init`, `vault passwd`) requires at least 12 Unicode scalar values after NFKC
+normalisation and rejects code points unassigned in the client's Unicode tables, because NFKC is
+stable across Unicode versions only for assigned code points. Unlocking applies neither of these
+last two rules.
 
 ### Vault key and body key
 
@@ -94,10 +96,10 @@ K_body = HKDF(ikm = VK, salt = vault_id, info = "vault/v1/body")
 
 A client checks the parameters against the floor and the ceiling before it runs Argon2id, whatever
 their source: a vault header, an imported file, or a backup. A header with parameters outside the
-bounds is rejected unless `test_kdf` is set and the client is a test build; release builds reject
-`test_kdf` outright. The parameters are read before anything can be authenticated, so this check is
-their only protection. The ceiling keeps a hostile file from exhausting memory in the WASM and
-Android builds.
+bounds is rejected unless `test_kdf` is set, the client is a test build, and the parameters are the
+test set; release builds reject `test_kdf` outright. The parameters are read before anything can be
+authenticated, so this check is their only protection. The ceiling keeps a hostile file from
+exhausting memory in the WASM and Android builds.
 
 `vault init` and `vault passwd` write the floor parameters (`m_kib = 65,536`, `t = 3`, `p = 1`)
 unless `--kdf-memory` selects 128 or 256 MiB. The floor keeps a password unlock in the Firefox WASM
@@ -178,9 +180,10 @@ merge, and write.
 These JSON rules are checked after decryption and apply to unknown fields too:
 
 - A duplicate key in any object is an integrity error.
-- Nesting is at most 32 levels.
-- Every number is an integer in `[0, 2^53)` written without a fraction or exponent. Any other
-  number is an integrity error.
+- Nesting is at most 32 levels, counting each object or array as one level and the outer object as
+  level 1.
+- Every number is an integer in `[0, 2^53)` written without a sign, fraction, or exponent. Any
+  other number, `-0` included, is an integrity error.
 - Every key the schema defines is required, except `review`, except `login` on items whose `type`
   is not `"login"`, and except the keys that an item of unknown `type` does not need (see items).
 
@@ -195,7 +198,7 @@ These JSON rules are checked after decryption and apply to unknown fields too:
 
 | Key | Type | Contents |
 | --- | --- | --- |
-| `v` | integer | Body schema version, `1` |
+| `v` | integer | Body schema version, at least `1`; `1` for this spec |
 | `horizon` | `ms` | The purge horizon (see the merge rule); `0` at `vault init` |
 | `items` | array | Items, in any order, with unique `id` values |
 | `tombstones` | array | Tombstones, with `id` values unique and absent from `items` |
@@ -213,12 +216,12 @@ A client refuses to write a body whose `v` is greater than the version it implem
 | `favourite` | boolean | |
 | `notes` | string | |
 | `fields` | array | Custom fields: `{"name": string, "value": string, "hidden": boolean}` |
-| `password_history` | array | `{"password": string, "retired": ms}`, at most 10, in history order |
+| `password_history` | array | `{"password": string, "retired": ms}`, at most 10; written in history order |
 | `created` | `ms` | Creation time |
 | `modified` | `ms` | Time of the last change |
 | `modified_by` | string | Device ID of the last change, 32 lowercase hex characters |
 | `review` | string | Present only when a merge flagged the item; `"clamped"` is the one v1 value |
-| `login` | object | Present when `type` is `"login"` |
+| `login` | object | Required when `type` is `"login"`; on any other type, an unknown field |
 
 | `login` key | Type | Contents |
 | --- | --- | --- |
@@ -229,11 +232,16 @@ A client refuses to write a body whose `v` is greater than the version it implem
 | `totp` | string or `null` | An `otpauth://` URI or a base32 secret; stored in v1.0, used from v1.1 |
 | `passkeys` | array | Passkey objects, kept verbatim in v1.0, defined in v1.2 |
 
-History order sorts entries by `retired`, newest first, and then by `password` as bytes in
-ascending order. An unknown `match` value is kept and treated as `"never"` when filling.
+History order sorts entries by `retired`, newest first, and then by `password` as bytes in ascending
+order. Normalising a history means removing entries with an empty `password` and entries equal to
+the item's current `login.password`, deduplicating by `password` while keeping the newest
+`retired`, sorting in history order, and keeping the first 10. A
+decoder accepts duplicate passwords and any order; every edit and merge normalises. An unknown
+`match` value is kept and treated as `"never"` when filling.
 
 An item whose `type` the client does not know needs only `id`, `type`, `modified`, and
-`modified_by`. It is kept whole, merged by the same rule, listed as unsupported, never edited, and
+`modified_by`, with the types the items table gives them. Every other key on it is kept without
+checks. It is kept whole, merged by the same rule, listed as unsupported, never edited, and
 may be deleted.
 
 A **device ID** is 16 random bytes generated when a client is set up. It identifies the writer of a
@@ -248,13 +256,12 @@ A **tombstone** records a deletion: `{"id": string, "modified": ms, "modified_by
 ### Local edits
 
 A local edit sets `modified = now` and `modified_by` to the device ID, and removes `review`. An edit
-that changes `login.password` adds the previous password to `password_history` with `retired = now`,
-then sorts in history order and keeps the first 10. A delete replaces the item with a tombstone
-stamped the same way.
+that changes `login.password` adds the previous password to `password_history` with `retired = now`
+and normalises the history. A delete replaces the item with a tombstone stamped the same way.
 
-An import creates items with `modified = now` and keeps the source's creation time in `created`. A
-restore of a whole vault or of one item copies the item from an older revision and sets
-`modified = now`.
+Imports and restores are local edits. An import creates items stamped as above and keeps the
+source's creation time in `created`. A restore of a whole vault or of one item copies the item from
+an older revision and stamps it as above.
 
 ## Merge rule
 
@@ -262,8 +269,10 @@ A merge combines a local body `L` and a remote body `R` into one body, on the me
 local time `now`. With `DAY = 86,400,000` and `cutoff = now ⊖ 15,552,000,000` (180 days):
 
 1. Clamp. Every item or tombstone `modified`, and every `password_history` `retired`, greater than
-   `now + DAY` becomes `now`; an item with a clamped `modified` also gets `review = "clamped"`. Each
-   input `horizon` greater than `cutoff + DAY` becomes `cutoff`.
+   `now + DAY` becomes `now`; an item with a clamped `modified` also gets `review = "clamped"`, and
+   every history of a login or note item on both sides is normalised (a note has no current
+   password). Each input `horizon` greater than `cutoff + DAY` becomes `cutoff`. On an item of
+   unknown `type`, only `modified` is clamped.
 2. Pair. For each `id` in either side, collect its item or tombstone from `L` and from `R`.
 3. Expire. An item present on only one side, with no item or tombstone for its `id` on the other,
    and with `modified` earlier than the other side's clamped `horizon`, is left out of the result
@@ -274,17 +283,22 @@ local time `now`. With `DAY = 86,400,000` and `cutoff = now ⊖ 15,552,000,000` 
    string. On a full tie the remote entry wins.
 5. Keep passwords. Where both entries are login items, the winner's `password_history` becomes the
    union of both histories plus the loser's `login.password`, with `retired` set to the loser's
-   `modified`, when that password differs from the winner's. Entries are deduplicated by
-   `password`, keeping the newest `retired`, then sorted in history order and cut to 10.
+   `modified`. The result is normalised, which removes the winner's own current password.
 6. Purge. Tombstones with `modified < cutoff` are dropped. The result's `horizon` is the greater of
    the two clamped input horizons, raised to `cutoff` when at least one tombstone was dropped.
-7. Unknown top-level fields. The result takes the remote value of each unknown top-level key and
-   adds the keys present only in `L`.
+7. Top level. The result's `v` is the greater of the two. The result takes the remote value of
+   each unknown top-level key and adds the keys present only in `L`.
 
-The winner is taken whole, unknown fields included. Rules 3 and 6 together keep a device that was
-offline for more than 180 days, or an old backup, from bringing back items deleted in the meantime.
-Because `horizon` changes only when a tombstone is purged, a merge of two bodies with the same
-content returns that content unchanged.
+The winner is taken whole, unknown fields included. A login that loses to a tombstone or to an item
+of another type loses its password with it, so with three or more devices the history a merge
+produces can depend on the order of merges. Rule 5 takes the union of both histories whenever two
+login items meet, so the difference disappears at the next merge between the devices concerned.
+The `retired` time of a history entry can also depend on the order of merges, when one device's
+newer entry for a password is removed because that password is another item version's current one;
+only that timestamp differs.
+Rules 3 and 6 together keep a device that was offline for more than 180 days, or an old backup, from
+bringing back items deleted in the meantime. Because `horizon` changes only when a tombstone is
+purged, a merge of two bodies with the same content returns that content unchanged.
 
 A client refuses to edit, merge, or push while its clock reads earlier than the client's build
 time, or while its clock differs by more than `DAY` from the `Date` header of the server's most
@@ -313,7 +327,7 @@ under that header with a fresh `body_nonce` and never change `generation`.
    failure is an integrity error.
 4. Merge the local body into the remote body.
 5. Adopt or push. When the merged body equals the remote body (items and tombstones compared as
-   sets keyed by `id`, values compared as JSON, and `horizon` and every unknown top-level key
+   sets keyed by `id`, values compared as JSON, and `v`, `horizon`, and every unknown top-level key
    compared as JSON), the client adopts the remote file as its local
    file, stores its generation and hash, and pushes nothing. Otherwise it writes the remote header
    with `generation` set to the remote generation plus one, a fresh `body_nonce`, and the merged
@@ -321,7 +335,8 @@ under that header with a fresh `body_nonce` and never change `generation`.
 6. On `412`, start again at step 1. On `200`, store the new generation and hash.
 
 A sync gives up and reports the failure after 5 consecutive `412` responses, or after a `404` on
-`GET` followed by `412` on `If-None-Match: *` twice in a row. The local file is unaffected and the
+`GET` followed by `412` on `If-None-Match: *` twice in a row. Every `412` counts toward the 5, and a
+`412` on `If-Match` ends a run of `404` then `412`. The local file is unaffected and the
 next sync starts afresh.
 
 The local vault file, the accepted generation and hash, and the `wrap_nonce` state change together
@@ -482,9 +497,10 @@ text:
 vault://setup?url=<server URL>&token=<token>&fp=<certificate SHA-256>
 ```
 
-- `url` is percent-encoded. `fp` is the SHA-256 of the server certificate's DER encoding, 64
-  lowercase hex characters. `token add` reads it from `--cert <file>` or `--fp <hex>`. With
-  `--no-fp`, or for a loopback `http` URL, the text has no `fp`.
+- `url` is percent-encoded, and `+` is a literal plus sign, not a space. `fp` is the SHA-256 of the
+  server certificate's DER encoding, 64 lowercase hex characters. `token add` reads it from
+  `--cert <file>` or `--fp <hex>`. With `--no-fp`, or for a loopback `http` URL, the text has no
+  `fp`; a parser rejects `fp` on a loopback `http` URL.
 - Parsers ignore unknown query parameters.
 - The server URL is parsed as a WHATWG URL. It has no user information and no fragment. Its scheme
   is `https`, or `http` when its host is exactly `localhost`, `127.0.0.1`, or `[::1]` after

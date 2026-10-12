@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo fmt --all --check
+
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo clippy -p vault-core --all-targets --features insecure-test-kdf -- -D warnings
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --workspace
+        env:
+          PROPTEST_CASES: 2000
+      - name: Tests with the test-only KDF parameters
+        run: cargo test -p vault-core --features insecure-test-kdf
+        env:
+          VAULT_EXPECT_TEST_KDF: "1"
+      - name: Release builds refuse the test KDF parameters
+        run: |
+          cargo test -p vault-core --release --test release_gate
+          if out=$(cargo build -p vault-core --release --features insecure-test-kdf 2>&1); then
+            echo "a release build with insecure-test-kdf compiled"; exit 1
+          fi
+          echo "$out" | grep -q "the insecure-test-kdf feature accepts the test KDF parameters" || {
+            echo "the release build failed for another reason:"; echo "$out"; exit 1
+          }
+
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build -p vault-core --target wasm32-unknown-unknown --release
+
+  deny:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+      - run: cargo audit
