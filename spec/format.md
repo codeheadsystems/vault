@@ -95,11 +95,13 @@ K_body = HKDF(ikm = VK, salt = vault_id, info = "vault/v1/body")
 | Test | 64 | 1 | 1 | Test builds only, with the header flag `test_kdf` set |
 
 A client checks the parameters against the floor and the ceiling before it runs Argon2id, whatever
-their source: a vault header, an imported file, or a backup. A header with parameters outside the
+the vault file's source: the server, a backup, or an export. A header with parameters outside the
 bounds is rejected unless `test_kdf` is set, the client is a test build, and the parameters are the
 test set; release builds reject `test_kdf` outright. The parameters are read before anything can be
 authenticated, so this check is their only protection. The ceiling keeps a hostile file from
-exhausting memory in the WASM and Android builds.
+exhausting memory in the WASM and Android builds. An import from another format checks that
+format's KDF parameters against bounds the importing client documents, with memory and iterations
+never above the ceiling.
 
 `vault init` and `vault passwd` write the floor parameters (`m_kib = 65,536`, `t = 3`, `p = 1`)
 unless `--kdf-memory` selects 128 or 256 MiB. The floor keeps a password unlock in the Firefox WASM
@@ -184,8 +186,9 @@ These JSON rules are checked after decryption and apply to unknown fields too:
   level 1.
 - Every number is an integer in `[0, 2^53)` written without a sign, fraction, or exponent. Any
   other number, `-0` included, is an integrity error.
-- Every key the schema defines is required, except `review`, except `login` on items whose `type`
-  is not `"login"`, and except the keys that an item of unknown `type` does not need (see items).
+- Every key the schema defines is required, except `review` and `origin`, except `login` on items
+  whose `type` is not `"login"`, and except the keys that an item of unknown `type` does not need
+  (see items).
 
 ```json
 {
@@ -221,6 +224,7 @@ A client refuses to write a body whose `v` is greater than the version it implem
 | `modified` | `ms` | Time of the last change |
 | `modified_by` | string | Device ID of the last change, 32 lowercase hex characters |
 | `review` | string | Present only when a merge flagged the item; `"clamped"` is the one v1 value |
+| `origin` | object | Present only on imported items: data from the source that has no key here, keyed by source |
 | `login` | object | Required when `type` is `"login"`; on any other type, an unknown field |
 
 | `login` key | Type | Contents |
@@ -239,6 +243,10 @@ the item's current `login.password`, deduplicating by `password` while keeping t
 entries before the loser's), sorting in history order, and keeping the first 10. A decoder accepts
 duplicate passwords and any order; every edit and merge normalises. An unknown `match` value is kept
 and treated as `"never"` when filling.
+
+`origin` holds one object per source, such as `origin.bitwarden`. Its contents belong to the
+importing client's documentation, and every other client keeps it verbatim without checking it. An
+`origin` that is not an object is an integrity error.
 
 An item whose `type` the client does not know needs only `id`, `type`, `modified`, and
 `modified_by`, with the types the items table gives them. Every other key on it is kept without
@@ -360,13 +368,14 @@ pulls. When the secret key comes from the emergency kit, the client also checks 
 On an integrity error the client keeps its local file, reports the error, and stops syncing.
 `vault sync --recover`:
 
-1. Lists `GET /v1/revisions` and fetches every retained revision.
+1. Lists `GET /v1/revisions` and fetches the newest 100 retained revisions.
 2. When any revision whose `vault_id` matches carries a `wrap_nonce` that is neither current nor
    retired (taken in order of `generation`, then revision ID, highest first), and opens with typed
    credentials in the credential change on another device flow, the client completes that flow with
    that revision and stops. A revision whose wrap does not open in that flow counts as garbage.
    Recovery continues past an unknown `wrap_nonce` only after the flow fails and the user confirms
-   that no credential change was made.
+   that no credential change was made; one confirmation covers every unknown `wrap_nonce` in that
+   run.
 3. Among the revisions whose `vault_id` matches, whose `generation` is at least the accepted
    generation, whose `wrap_nonce` is the current one, and which open, takes the one with the highest
    generation, and on equal generations the highest revision ID.
@@ -446,6 +455,7 @@ setup runs again.
 | `PUT /v1/vault` with `If-Match: <etag>` | When the `ETag` matches, stores the body as the current revision and returns `200` with the new `ETag`; otherwise `412` |
 | `PUT /v1/vault` with `If-None-Match: *` | Stores the first revision and returns `200`; `412` when one exists |
 | `PUT /v1/vault` with neither header | `428` |
+| `PUT /v1/vault` with a body not shaped like a vault file | `400` |
 | `GET /v1/revisions` | `200` with the list of retained revisions, newest first |
 | `GET /v1/revisions/<id>` | `200` with that revision's vault file; `404` when it is not retained |
 
@@ -456,9 +466,14 @@ setup runs again.
 - A `PUT` body over 16 MiB receives `413`. A `PUT` that would exceed the storage quota receives
   `507`, and nothing is deleted to make room.
 - A revision ID is a decimal integer assigned by the server, increasing with every stored revision.
-- The server keeps the last 100 revisions, or every revision from the last 90 days, whichever is
-  more. `vault serve revisions prune --before <id>` deletes older revisions and is the only way a
-  revision inside that window is removed. It never removes the current revision.
+- A body is shaped like a vault file when it starts with `VAULT` and its size is at least 4,269
+  bytes, with `size - 173` a multiple of 4,096. The server checks nothing else in it.
+- The server keeps the newest 100 revisions, the newest revision of each token on each UTC day of
+  the last 90 days, the newest revision of each token, and the current revision. It deletes the
+  others. Each revision counts against the quota as its size rounded up to 4,096 bytes plus 4,096
+  bytes, and at most 10,000 revisions are retained. `vault serve revisions prune` and
+  `vault serve revisions rm`, run locally, are the only ways a revision kept by these rules is
+  removed. Neither removes the current revision.
 - The server sends no CORS headers. The Firefox extension reaches it through host permissions.
 
 `GET /v1/revisions` returns:

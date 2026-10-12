@@ -206,11 +206,14 @@ The server is dumb. It stores bytes and tokens, and nothing else:
 - Authentication is a bearer token per device, stored hashed. `vault serve token add <name>`
   prints a token; `vault serve token ls` and `vault serve token rm <name>` list and revoke. These
   subcommands edit the server's data directory directly; there is no admin API over the network.
-- The server keeps the last 100 revisions, or 90 days, whichever is more. Restoring one is a
-  client operation: download, inspect, push as a new revision.
-- A blob larger than 16 MB is refused. Total storage has a quota (1 GB by default); at the quota
-  the server refuses pushes rather than delete retained revisions. A stolen token can therefore
-  stop sync, but cannot fill the disk or erase history.
+- The server keeps the newest 100 revisions, one revision per device per day for 90 days, and
+  each device's newest revision. Restoring one is a client operation: download, inspect, push as
+  a new revision.
+- A blob larger than 16 MB, or one not shaped like a vault file, is refused. Total storage has a
+  quota (2 GB by default) that charges every revision at least 8 KB, and at most 10,000 revisions
+  are kept; at either limit the server refuses pushes rather than delete retained revisions. A
+  stolen token can therefore stop sync, but cannot fill the disk or erase history. Garbage pushed
+  with a stolen token cannot push out each other device's newest revision.
 - Each revision records the token that pushed it, so `vault serve token ls` shows each device's last
   push and a misbehaving token is identifiable.
 - Storage is a directory on disk.
@@ -333,7 +336,9 @@ Security principles:
 - The body's AEAD authenticates the whole header, including the generation number.
 - KDF parameters are read before anything can be verified, so authentication alone does not
   protect them. Every client rejects Argon2id parameters below the floor or above a ceiling before
-  running Argon2id, whatever their source: the vault header, an imported file, or a backup. The
+  running Argon2id, whatever the vault file's source: the server, a backup, or an export. An
+  import from another format (a Bitwarden export) has that format's lower bounds, but never
+  exceeds the ceiling. The
   floor stops a client from writing weak parameters; the ceiling stops a file from exhausting
   memory, which matters most in the Firefox WASM build.
 - Plaintext lives only in memory, with two stated exceptions: `vault edit` (CLI-4) and plaintext
@@ -416,7 +421,7 @@ P0 blocks v1.0; P1 should land in v1.0 but does not block it; P2 is after v1.0.
 | SRV-1 | `GET` and conditional `PUT` of one blob, with `ETag` | P0 |
 | SRV-2 | Per-device bearer tokens: `vault serve token add`, `ls`, `rm`, editing the data directory locally; no network admin API; `add` prints the URL and token as text and QR code | P0 |
 | SRV-7 | The server never receives, stores, or logs the secret key, master password, or vault key | P0 |
-| SRV-3 | Revision retention: last 100 or 90 days, whichever is more | P0 |
+| SRV-3 | Revision retention: newest 100, one per device per day for 90 days, and each device's newest | P0 |
 | SRV-9 | 16 MB blob limit; storage quota that refuses pushes instead of deleting revisions | P0 |
 | SRV-10 | Each revision records its pushing token; `token ls` shows each token's last push | P0 |
 | SRV-11 | `vault serve revisions prune --before <revision>`, run locally on the server | P1 |
@@ -502,7 +507,7 @@ P0 blocks v1.0; P1 should land in v1.0 but does not block it; P2 is after v1.0.
 | Recovery | Emergency kit plus master password plus a new token opens the vault on a fresh device |
 | Integrity | No client ever merges a lower generation or treats an unreadable remote as empty |
 | Cost | One small process on hardware I already run |
-| Licence | MIT; dependencies MIT, Apache-2.0, BSD, ISC, Zlib, or Unicode, enforced by `cargo-deny` |
+| Licence | MIT; dependencies MIT, Apache-2.0, BSD, ISC, Zlib, or Unicode, enforced by `cargo-deny`; one exception, `webpki-roots` (CDLA-Permissive-2.0), because it is the Mozilla root set the CLI trusts for a publicly trusted certificate |
 | Simplicity | Format spec (header, body, item schema, merge rule, server API) kept as short as the rules allow; no client-specific data in the vault file |
 
 ## Complexity guardrails
