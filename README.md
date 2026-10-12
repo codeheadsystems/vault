@@ -95,4 +95,4 @@ vault sync
 
 ## Licence
 
-MIT.
+MIT; see [LICENSE](LICENSE).
