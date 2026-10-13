@@ -1860,6 +1860,43 @@ fn setup_file() {
             format!("vault://setup?url={}", enc("https://vault.example")),
         ),
         ("not setup text", "https://vault.example".to_owned()),
+        ("host *", text("https://*", "")),
+        ("host *.example", text("https://*.example", "")),
+        ("_ in a label", text("https://vault_1.example", "")),
+        ("an empty label", text("https://a..b", "")),
+        ("a trailing dot", text("https://vault.example.", "")),
+        (
+            "a 64-character label",
+            text(&format!("https://{}.example", "a".repeat(64)), ""),
+        ),
+        (
+            "a 63-character label",
+            text(&format!("https://{}.example", "a".repeat(63)), ""),
+        ),
+        ("an xn-- host", text("https://xn--bcher-kva.example", "")),
+        (
+            "a Unicode host parses to xn--",
+            text("https://b\u{fc}cher.example", ""),
+        ),
+        (
+            "upper case and a hyphen",
+            text("https://VAULT-1.Example:8443", ""),
+        ),
+        ("an IPv6 host", text("https://[fe80::1]:8443", "")),
+        (
+            "fullwidth \u{ff0a} maps to *",
+            text("https://\u{ff0a}.example", ""),
+        ),
+        (
+            "upper-case Unicode is lower-cased",
+            text("https://B\u{dc}CHER.example", ""),
+        ),
+        ("an empty host", text("https://", "")),
+        ("a percent-encoded *", text("https://%2a.example", "")),
+        (
+            "a label with a leading hyphen",
+            text("https://-a.example", ""),
+        ),
     ] {
         let mut c = json!({"name": name, "op": "parse", "input": input});
         match setup::parse_setup(&input) {

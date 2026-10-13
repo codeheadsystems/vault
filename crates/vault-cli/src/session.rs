@@ -10,15 +10,15 @@ use crate::settings::Settings;
 use crate::store::{self, ServerConfig};
 use crate::sys::{agent, prompt, secrets};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-use vault_client::commit::Commit;
+use vault_client::commit::{ApplyError, Commit, CommitHost};
+use vault_client::edit::EditError;
 use vault_client::sync::{self, Mode, SyncOutcome, SyncReport};
 use vault_client::{
     Answer, ClientError, ClientState, Finished, Input, Keys, Machine, Prompt, Purpose, Request,
-    Response, Save, SecretKeyChange, SecretKeyStore, Step, StopReason,
+    Response, Save, SecretKeyStore, Step, StopReason,
 };
 use vault_core::body::Body;
-use vault_core::clock::{BUILD_TIME_MS, check_clock};
-use vault_core::file::{open_file, seal_file_with_rng};
+use vault_core::file::open_file;
 use vault_core::secret::{SecretKey, SecretString, VaultKey};
 use vault_core::{Error, InputKind};
 
@@ -93,7 +93,9 @@ pub fn transport(server: &ServerConfig) -> Result<Transport> {
     Transport::new(server).map_err(|_| {
         CliError::other(
             "input.server_url",
-            "the server URL is not https, or http to localhost, 127.0.0.1, or [::1]",
+            "the server URL is refused: it is https, or http to localhost, 127.0.0.1, or [::1]; its \
+             host is an IP address or a name of dot-separated labels of 1 to 63 characters from \
+             a-z, 0-9, and -; and it has no user information or fragment",
         )
     })
 }
@@ -178,45 +180,76 @@ pub fn commit<T>(
 ) -> Result<Commit> {
     let lock = store::lock(paths)?;
     let on_disk = store::require_state(paths)?;
-    let c = match f.commit(started, &on_disk, background, now_ms(), &mut OsRng) {
-        Err(ClientError::Superseded) => {
+    let mut host = Host { paths, lock: &lock };
+    match vault_client::commit::apply(
+        f,
+        started,
+        &on_disk,
+        background,
+        now_ms(),
+        &mut OsRng,
+        &mut host,
+    ) {
+        Ok(Some(a)) => {
+            // The commit stands; an unused key is left in the pending slot.
+            if let (Some(out), Some(e)) = (out, a.pending_left) {
+                out.warn(&format!(
+                    "the pending secret key, no longer used, could not be deleted: {e}"
+                ));
+            }
+            Ok(a.commit)
+        }
+        Ok(None) => {
             if let (Some(out), true) = (out, f.result.is_ok()) {
                 out.warn("another sync finished first; it already holds the vault's state");
             }
-            return Ok(Commit {
+            Ok(Commit {
                 state: None,
                 merged_local_changes: false,
                 expired: Vec::new(),
-            });
+            })
         }
-        r => r?,
-    };
-    let target = c.state.as_ref().unwrap_or(&on_disk);
-    let (kind, id) = (target.secret_key_store, target.vault_id);
-    // A new or promoted key goes in before the state that needs it; a discarded one after.
-    let discard = match &f.secret_key {
-        None => false,
-        Some(SecretKeyChange::Replace(sk)) => {
-            secrets::store(paths, kind, &id, secrets::Slot::Current, sk)?;
-            false
-        }
-        Some(SecretKeyChange::ReplaceAndDiscardPending(sk)) => {
-            secrets::store(paths, kind, &id, secrets::Slot::Current, sk)?;
-            true
-        }
-        Some(SecretKeyChange::PromotePending) => {
-            secrets::promote_pending(paths, kind, &id)?;
-            false
-        }
-        Some(SecretKeyChange::DiscardPending) => true,
-    };
-    if let Some(s) = &c.state {
-        store::write_state(paths, &lock, s)?;
+        Err(ApplyError::Client(e)) => Err(e.into()),
+        Err(ApplyError::Host(e)) => Err(e),
     }
-    if discard {
-        secrets::remove(paths, kind, &id, secrets::Slot::Pending)?;
+}
+
+/// The data directory and its secret key store, as the commit writes them under the lock.
+struct Host<'a> {
+    paths: &'a Paths,
+    lock: &'a store::Lock,
+}
+
+impl CommitHost for Host<'_> {
+    type Error = CliError;
+
+    fn store_current(
+        &mut self,
+        kind: SecretKeyStore,
+        vault_id: &[u8; 16],
+        key: &SecretKey,
+    ) -> Result<()> {
+        secrets::store(self.paths, kind, vault_id, secrets::Slot::Current, key)
     }
-    Ok(c)
+
+    fn copy_pending_to_current(&mut self, kind: SecretKeyStore, vault_id: &[u8; 16]) -> Result<()> {
+        let pending = secrets::load(self.paths, kind, vault_id, secrets::Slot::Pending)?
+            .ok_or_else(|| {
+                CliError::other(
+                    "secret_key.no_pending",
+                    "the pending secret key is missing from its store",
+                )
+            })?;
+        secrets::store(self.paths, kind, vault_id, secrets::Slot::Current, &pending)
+    }
+
+    fn delete_pending(&mut self, kind: SecretKeyStore, vault_id: &[u8; 16]) -> Result<()> {
+        secrets::remove(self.paths, kind, vault_id, secrets::Slot::Pending)
+    }
+
+    fn write_state(&mut self, state: &ClientState) -> Result<()> {
+        store::write_state(self.paths, self.lock, state)
+    }
 }
 
 /// The secret keys stored for `state`.
@@ -565,20 +598,28 @@ pub fn write<R>(
     session: &Session,
     edit: impl FnOnce(&mut Body, u64, &[u8; 16]) -> Result<R>,
 ) -> Result<(R, bool)> {
-    let now = now_ms();
-    check_clock(now, BUILD_TIME_MS, None)?;
     let device_id = store::read_device_id(&ctx.paths)?;
     let lock = store::lock(&ctx.paths)?;
-    let mut state = store::require_state(&ctx.paths)?;
-    let (header, mut body) = open_file(&state.file, &session.vault_key)?;
-    let before = body.clone();
-    let r = edit(&mut body, now, &device_id)?;
-    if body == before {
-        return Ok((r, false));
+    let state = store::require_state(&ctx.paths)?;
+    let (r, next) = vault_client::edit::local_edit(
+        &state,
+        &session.vault_key,
+        &device_id,
+        now_ms(),
+        &mut OsRng,
+        edit,
+    )
+    .map_err(|e| match e {
+        EditError::Client(c) => CliError::from(c),
+        EditError::Edit(e) => e,
+    })?;
+    match next {
+        Some(next) => {
+            store::write_state(&ctx.paths, &lock, &next)?;
+            Ok((r, true))
+        }
+        None => Ok((r, false)),
     }
-    state.file = seal_file_with_rng(&mut OsRng, &header, &session.vault_key, &body)?;
-    store::write_state(&ctx.paths, &lock, &state)?;
-    Ok((r, true))
 }
 
 /// After a write: asks the agent to sync, or without an agent syncs with a 10 s limit. Returns
@@ -752,6 +793,26 @@ pub fn finish<T>(r: std::result::Result<T, ClientError>, t: Option<&Transport>) 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_refused_host_gets_the_url_rule() {
+        let server = ServerConfig {
+            url: "https://*/".into(),
+            token: vault_core::secret::Token::from_bytes([0; 20]),
+            fp: None,
+        };
+        let e = transport(&server).err().expect("a * host is refused");
+        assert!(
+            e.message().starts_with("the server URL is refused: "),
+            "{}",
+            e.message()
+        );
+        assert!(
+            e.message().contains("its host is an IP address or a name"),
+            "{}",
+            e.message()
+        );
+    }
     use vault_client::SecretKeyStore;
     use vault_core::sync::Accepted;
 

@@ -6,13 +6,14 @@ use crate::items::{self, display_name, select};
 use crate::output::{JsonResult, obj, s};
 use crate::session::{self, Ctx, OsRng, Session};
 use crate::sys::{clip, editor, prompt};
+use vault_client::items as listing;
 use vault_core::body::{Item, ItemData, ItemFields, TYPE_LOGIN, TYPE_NOTE};
 use vault_core::edit::{add_item, delete_item, update_item};
 use vault_core::json::Value;
 use vault_core::secret::SecretString;
 
 fn list(ctx: &Ctx, session: &Session, keep: impl Fn(&Item) -> bool) -> JsonResult {
-    let found = items::sorted(session.body.items.iter().filter(|i| keep(i)).collect());
+    let found = listing::sorted(session.body.items.iter().filter(|i| keep(i)).collect());
     for i in &found {
         ctx.out.line(&items::summary_line(i));
     }
@@ -27,14 +28,14 @@ fn list(ctx: &Ctx, session: &Session, keep: impl Fn(&Item) -> bool) -> JsonResul
 pub fn ls(ctx: &Ctx, folder: Option<&str>, review: bool) -> Result<JsonResult> {
     let session = session::open(ctx)?;
     Ok(list(ctx, &session, |i| {
-        folder.is_none_or(|f| items::in_folder(i, f)) && (!review || i.review.is_some())
+        folder.is_none_or(|f| listing::in_folder(i, f)) && (!review || i.review.is_some())
     }))
 }
 
 /// `vault find <text>`.
 pub fn find(ctx: &Ctx, text: &str) -> Result<JsonResult> {
     let session = session::open(ctx)?;
-    Ok(list(ctx, &session, |i| items::matches_text(i, text)))
+    Ok(list(ctx, &session, |i| listing::matches_text(i, text)))
 }
 
 /// `vault show <item>`.
@@ -215,7 +216,7 @@ fn update_changed(
             "the item was deleted while it was being changed; nothing was saved",
         )
     })?;
-    let fields = items::apply_changes(base, edited, current);
+    let fields = listing::apply_changes(base, edited, current);
     if fields != *current {
         update_item(body, id, fields, now, device)?;
     }

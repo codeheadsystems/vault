@@ -636,6 +636,18 @@ async fn unknown_revoked_and_reloaded_tokens() {
 #[test]
 fn token_commands() {
     let env = Env::http("64MiB");
+    // A host that is not an IP address or LDH labels is refused with the URL rule.
+    let star = TokenAddArgs {
+        url: Some("https://*/".into()),
+        ..add_args("star")
+    };
+    match token_add(&env.data, &star) {
+        Err(Error::Invalid(m)) => {
+            assert!(m.starts_with("--url \"https://*/\" is refused: "), "{m}");
+            assert!(m.contains("its host is an IP address or a name"), "{m}");
+        }
+        other => panic!("{:?}", other.map(|_| ())),
+    }
     // A loopback http URL never carries fp.
     let added = token_add(&env.data, &add_args("laptop")).unwrap();
     assert!(added.fingerprint.is_none());
@@ -1336,6 +1348,22 @@ async fn unsafe_data_directories_are_refused() {
 fn init_rules() {
     let env = Env::new();
     let base = http_args("2GiB");
+    // A host that is not an IP address or LDH labels is refused with the URL rule.
+    for host in ["*", "a_b.lan"] {
+        let url = format!("https://{host}:8443");
+        let env = Env::new();
+        let args = InitArgs {
+            url: url.clone(),
+            ..base.clone()
+        };
+        match init(&env.data, &args) {
+            Err(Error::Invalid(m)) => {
+                assert!(m.starts_with(&format!("--url {url:?} is refused: ")), "{m}");
+                assert!(m.contains("its host is an IP address or a name"), "{m}");
+            }
+            other => panic!("{host}: {:?}", other.map(|_| ())),
+        }
+    }
     let refused = |args: InitArgs| {
         let env = Env::new();
         assert!(

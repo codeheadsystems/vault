@@ -542,10 +542,12 @@ vault://setup?url=<server URL>&token=<token>&fp=<certificate SHA-256>
   `fp`; a parser rejects `fp` on a loopback `http` URL.
 - Parsers ignore unknown query parameters.
 - The server URL is parsed as a WHATWG URL. It has no user information and no fragment. Its scheme
-  is `https`, or `http` when its host is exactly `localhost`, `127.0.0.1`, or `[::1]` after
-  parsing. The CLI and Android connect to `localhost` only through `127.0.0.1` or `::1`, never
-  through the system resolver. Firefox uses the URL as given, because its certificate exception
-  belongs to the exact host name.
+  is `https`, or `http` when its host is exactly `localhost`, `127.0.0.1`, or `[::1]` after parsing.
+  Its host, after parsing, is an IPv4 address, an IPv6 address, or a domain whose labels are each 1
+  to 63 characters from `a`-`z`, `0`-`9`, and `-`. Firefox requests a host permission built from the
+  host, so a host such as `*` would grant every site. The CLI and Android connect to `localhost`
+  only through `127.0.0.1` or `::1`, never through the system resolver. Firefox uses the URL as
+  given, because its certificate exception belongs to the exact host name.
 - With `fp`, the CLI and Android accept the connection only when the leaf certificate's DER
   SHA-256 equals `fp`. They ignore the chain, the name, and the validity dates, and never update
   the pin on their own; a new certificate means new setup text.
@@ -571,7 +573,7 @@ Each client keeps, outside the vault file:
 | `vault_id`, accepted generation and its file hash, current and retired `wrap_nonce` values | Local file or app storage, written atomically with the local vault file |
 | Server URL, token, certificate fingerprint | Local file or app storage |
 | Device ID | Local file or app storage, excluded from backup and copies |
-| Secret key, and a pending new secret key during `--new-secret-key` | OS keyring (CLI, with a file readable only by the user as fallback); Keystore-protected app storage (Android); extension local storage (Firefox) |
+| Secret key, and a pending new secret key during `--new-secret-key` | OS keyring (CLI, with a file readable only by the user as fallback); Keystore-protected app storage (Android); IndexedDB of the extension's own origin (Firefox) |
 | Quick-unlock vault key | CLI agent memory; Android Keystore wrap requiring biometric authentication; Firefox `storage.session`, holding the vault key or, with PIN unlock, the vault key wrapped by a PIN-derived key |
 
 Firefox never widens the access level of `storage.session` to content scripts, and never writes to
@@ -579,6 +581,113 @@ Firefox never widens the access level of `storage.session` to content scripts, a
 
 Local changes not yet pushed live in the local vault file as an ordinary body. No separate write
 queue exists: the next sync merges the local body into the remote one.
+
+## Autofill matching
+
+Every client that fills or offers to save follows these rules, and the threat model's web page row
+depends on them. The page URL comes from the browser, never from page content. Firefox applies them
+to the URL of the tab's top frame; Android applies them to a web domain only as the requirements
+allow.
+
+### URL parsing
+
+A URL is parsed as a WHATWG URL. A **page URL** fills only when its scheme is `http` or `https` and
+it has a host. An item URI is prepared for matching as follows:
+
+1. Remove leading and trailing ASCII whitespace.
+2. When the result does not start with a scheme followed by `://` (an ASCII letter, then ASCII
+   letters, digits, `+`, `-`, or `.`, then `://`), prefix `https://`. A URI imported without a
+   scheme, such as `github.com` or `nas.lan:8443`, therefore matches as `https`.
+3. Parse the result. A URI that fails to parse, whose scheme is not `http` or `https`, or that has
+   user information never matches a page. The last rule also keeps a URI such as
+   `mailto:x@example.com`, which step 2 turns into `https://mailto:x@example.com`, from matching.
+
+Parsing lowercases the host, converts an internationalised host to its ASCII form, normalises an
+IPv4 address (`0x7f.1` becomes `127.0.0.1`), compresses an IPv6 address, and drops a port that is
+the scheme's default. A page URL's user information takes no part in matching. One trailing `.` is
+removed from a domain before any comparison; a domain that then has an empty label, such as `a..b`
+or `example.com..`, never matches, as a page or as an item.
+
+The **origin** of a parsed URL is its scheme, host, and port. The **path and query** of a parsed URL
+is its serialised path followed, when present, by `?` and its query; the fragment takes no part in
+matching.
+
+### Registrable domain
+
+A host's **known suffix** is the longest public suffix that an explicit Public Suffix List rule
+gives it, ICANN and private sections both; the list's default `*` rule gives no known suffix. The
+client supplies the known suffix from its platform's copy of the list (Firefox
+`browser.publicSuffix`, Android's bundled list), and checks that the answer equals the whole host or
+a sequence of its trailing labels; an empty answer fails. When the answer for either host fails that
+check, the URI does not match, whatever its mode.
+
+The **registrable domain** of a host is:
+
+- the host itself when it is an IP address;
+- the host itself when it has no known suffix, so `nas.lan` matches only `nas.lan`, never
+  `printer.lan`;
+- the host itself when it equals its known suffix, so `github.io` matches only `github.io`;
+- otherwise the known suffix with the one label before it, so `a.b.example.co.uk` gives
+  `example.co.uk`.
+
+### Match modes
+
+An item URI matches a page URL when its mode holds:
+
+| `match` | Holds when |
+| --- | --- |
+| `base_domain` | The two hosts have equal registrable domains; schemes and ports may differ |
+| `host` | The hosts are equal and the ports are equal, a default port counting as none |
+| `starts_with` | The origins are equal and the page's path and query start with the item's |
+| `exact` | The origins are equal and the paths and queries are equal |
+| `never` | Never |
+
+An unknown `match` value is treated as `never`. Under `starts_with` and `exact` a scheme difference
+is a different origin, so neither mode ever needs the scheme rule below.
+
+### Scheme rule
+
+A match of an `https` item URI against an `http` page is refused, unless the page host is a **local
+host**:
+
+- a domain with no known suffix, such as `localhost` or `nas.lan`;
+- `home.arpa` or a domain under it;
+- an IPv4 address in `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, or
+  `169.254.0.0/16`;
+- an IPv6 address that is `::1`, in `fc00::/7`, or in `fe80::/10`.
+
+Such a match gives `confirm`: it fills only after the user confirms it. Every other match gives
+`fill`, including an `http` item URI on an `https` page and an `http` item URI on an `http` page.
+
+### Item outcome
+
+Each URI of a login item gives `fill`, `confirm`, or `none`. The item's outcome is the best of them,
+`fill` before `confirm` before `none`; an item with no URIs, or one that is not a login, has the
+outcome `none`. The candidates for a fill are the items whose outcome is not `none`, listed `fill`
+first, then by `name` compared as Unicode code points, then by `id`.
+
+### Frames
+
+Firefox fills the top frame of the tab and each frame whose origin equals the origin of the top
+frame, and no other frame. Frames are read from the browser after the user chooses an item. The fill
+script receives the expected origin and writes nothing when the origin of the document it runs in
+differs.
+
+### Save offers
+
+A save offer starts from a submitted form with a non-empty password on a page URL from the browser.
+It considers the login items whose outcome is `fill` against that page:
+
+- When one of them has the submitted username, compared exactly, and the submitted password, the
+  client offers nothing.
+- When one or more have the submitted username but a different password, the client offers to update
+  the password of the first in candidate order.
+- Otherwise the client offers to save a new login item. Its name is the page host, its one URI is
+  the page origin serialised with mode `base_domain`, both without a trailing `.`, and its other
+  values are the submitted username and password.
+
+A client saves nothing without the user's confirmation, and never stores the page's path, query, or
+fragment from a save offer.
 
 ## Format versioning
 
@@ -603,6 +712,7 @@ sets keyed by `id`. Every client checks them in its test suite.
 | `credentials.json` | A credential change: the old header opens only old revisions, `--rekey` with the old password refused through the retired list, `--new-secret-key`, a `412` during `passwd` with the old and with a new `wrap_nonce`, and a lost `--new-secret-key` response with each key opening the remote |
 | `tamper.json` | A vault file with one flipped byte per header field and in the body, each rejected |
 | `malformed.json` | Authenticated files that break a decode rule: generation `0`, unknown flags, non-zero padding, a length past the end, duplicate IDs, duplicate JSON keys, a float, a number of 2^53, an upper-case UUID, and nesting past 32 |
-| `setup.json` | Setup text parsing: `[::1]`, `127.1`, `localhost.`, user information, a fragment, `https` without `fp`, an unknown parameter, a refused non-loopback `http` URL, and a certificate that fails the pin |
+| `setup.json` | Setup text parsing: `[::1]`, a host refused for a character outside the label rule, `127.1`, `localhost.`, user information, a fragment, `https` without `fp`, an unknown parameter, a refused non-loopback `http` URL, and a certificate that fails the pin |
 | `token.json` | Token text form, a lower-case token, and the stored hash |
 | `etag.json` | `ETag` values computed from file bytes |
+| `autofill.json` | URI preparation, registrable domains with a supplied known-suffix table, each match mode, the scheme rule and local hosts, item outcomes and candidate order, frame selection, and save offers |

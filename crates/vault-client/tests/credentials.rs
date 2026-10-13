@@ -2008,3 +2008,210 @@ fn a_takeover_records_the_lowest_revision_under_the_new_wrap() {
     b.sync(&mut server, interactive(), T0, vec![pw(PW2)]).ok();
     assert_eq!(b.state.retired[0].revision, Some(change_revision));
 }
+
+/// A host that stops after `writes` writes, as a crash does: the writes before it land, and
+/// nothing after.
+struct Crash<'a> {
+    slots: Slots<'a>,
+    writes: usize,
+}
+
+impl Crash<'_> {
+    fn step(&mut self) -> Result<(), &'static str> {
+        if self.writes == 0 {
+            return Err("crash");
+        }
+        self.writes -= 1;
+        Ok(())
+    }
+}
+
+impl vault_client::commit::CommitHost for Crash<'_> {
+    type Error = &'static str;
+
+    fn store_current(
+        &mut self,
+        store: SecretKeyStore,
+        vault_id: &[u8; 16],
+        key: &SecretKey,
+    ) -> Result<(), &'static str> {
+        self.step()?;
+        self.slots.store_current(store, vault_id, key)
+    }
+
+    fn copy_pending_to_current(
+        &mut self,
+        store: SecretKeyStore,
+        vault_id: &[u8; 16],
+    ) -> Result<(), &'static str> {
+        self.step()?;
+        self.slots.copy_pending_to_current(store, vault_id)
+    }
+
+    fn delete_pending(
+        &mut self,
+        store: SecretKeyStore,
+        vault_id: &[u8; 16],
+    ) -> Result<(), &'static str> {
+        self.step()?;
+        self.slots.delete_pending(store, vault_id)
+    }
+
+    fn write_state(&mut self, state: &vault_client::ClientState) -> Result<(), &'static str> {
+        self.step()?;
+        self.slots.write_state(state)
+    }
+}
+
+/// Runs an interactive sync on `c` without committing it, then commits it with a crash after
+/// `writes` writes. The cached vault key is dropped, as for a client without an agent.
+fn sync_and_crash(
+    c: &mut Client,
+    server: &mut Server,
+    answers: Vec<Answer>,
+    writes: usize,
+) -> Option<vault_client::SecretKeyChange> {
+    use vault_client::commit::apply;
+    let started = c.state.clone();
+    let m = vault_client::sync::sync(started.clone(), c.keys(), interactive(), c.rng());
+    let token = c.token.clone();
+    let run = drive(m, server, &token, T0, answers);
+    run.ok();
+    let on_disk = c.state.clone();
+    let mut rng = c.rng();
+    let mut host = Crash {
+        slots: Slots {
+            state: &mut c.state,
+            current: &mut c.sk,
+            pending: &mut c.pending,
+        },
+        writes,
+    };
+    let _ = apply(
+        &run.finished,
+        &started,
+        &on_disk,
+        false,
+        T0,
+        &mut rng,
+        &mut host,
+    );
+    c.vk = None;
+    run.finished.secret_key
+}
+
+/// A client whose `--new-secret-key` push landed, or not, but whose response was lost.
+fn lost_new_secret_key(lands: bool) -> (Client, Server) {
+    let mut server = Server::default();
+    let mut a = init_client(&mut server, 4);
+    let mut lost = true;
+    server.hook = Some(Box::new(move |s: &mut Server, r: &Request| match r {
+        Request::PutVault { file, .. } if lost => {
+            lost = false;
+            if lands {
+                s.store(file.clone(), TOKEN);
+            }
+            Some(None)
+        }
+        _ => None,
+    }));
+    let run = run_passwd(
+        &mut a,
+        &mut server,
+        PasswdChange::NewSecretKey { new_password: true },
+        vec![pw(PW2)],
+    );
+    assert_eq!(run.err(), ClientError::OutcomeUnknown);
+    (a, server)
+}
+
+#[test]
+fn a_crash_while_promoting_a_pending_key_is_settled_by_the_next_sync() {
+    // Writes: copy the pending key to current, write the state, delete the pending key.
+    for writes in 0..=3 {
+        let (mut a, mut server) = lost_new_secret_key(true);
+        let new_sk = a.pending.as_ref().unwrap().expose().to_vec();
+        let change = sync_and_crash(&mut a, &mut server, vec![pw(PW2)], writes);
+        assert!(matches!(
+            change,
+            Some(vault_client::SecretKeyChange::PromotePending)
+        ));
+        // Whatever landed, the stored slots open the remote: the next sync settles it.
+        let run = a.sync(&mut server, interactive(), T0, vec![pw(PW2)]);
+        run.ok();
+        assert!(!a.state.pending_secret_key, "after {writes} writes");
+        assert_eq!(a.sk.as_ref().unwrap().expose().to_vec(), new_sk);
+        assert!(open_file(&a.state.file, a.vk.as_ref().unwrap()).is_ok());
+    }
+}
+
+#[test]
+fn a_crash_while_discarding_a_pending_key_is_settled_by_the_next_sync() {
+    // Writes: write the state, delete the pending key.
+    for writes in 0..=2 {
+        let (mut a, mut server) = lost_new_secret_key(false);
+        let old_sk = a.sk.as_ref().unwrap().expose().to_vec();
+        // The cached vault key still opens the remote, under the current wrap.
+        let change = sync_and_crash(&mut a, &mut server, vec![], writes);
+        assert!(matches!(
+            change,
+            Some(vault_client::SecretKeyChange::DiscardPending)
+        ));
+        a.sync(&mut server, interactive(), T0, vec![pw(PW)]).ok();
+        assert!(!a.state.pending_secret_key, "after {writes} writes");
+        assert_eq!(a.sk.as_ref().unwrap().expose().to_vec(), old_sk);
+    }
+}
+
+#[test]
+fn a_crash_while_taking_over_a_new_secret_key_is_settled_by_the_next_sync() {
+    // Writes: store the new current key, write the state.
+    for writes in 0..=2 {
+        let mut server = Server::default();
+        let (mut a, mut b) = two_devices(&mut server);
+        run_passwd(
+            &mut a,
+            &mut server,
+            PasswdChange::NewSecretKey { new_password: true },
+            vec![pw(PW2)],
+        )
+        .ok();
+        let new_sk = a.sk.as_ref().unwrap().clone_secret();
+        let change = sync_and_crash(
+            &mut b,
+            &mut server,
+            vec![pw(PW2), pw_sk(PW2, &new_sk)],
+            writes,
+        );
+        assert!(matches!(
+            change,
+            Some(vault_client::SecretKeyChange::Replace(_))
+        ));
+        // Before the key write the sync asks for the new key again; after it, the stored key
+        // opens the remote, or the state.
+        let answers = if writes == 0 {
+            vec![pw(PW2), pw_sk(PW2, &new_sk)]
+        } else {
+            vec![pw(PW2)]
+        };
+        b.sync(&mut server, interactive(), T0, answers).ok();
+        assert_eq!(b.sk.as_ref().unwrap().expose(), new_sk.expose());
+        assert_eq!(
+            b.state.wrap_nonce, a.state.wrap_nonce,
+            "after {writes} writes"
+        );
+    }
+}
+
+#[test]
+fn a_pending_key_equal_to_the_current_one_settles_as_landed() {
+    // After a crash between copying the pending key and writing the state, both slots hold the
+    // new key.
+    let (a, server) = lost_new_secret_key(true);
+    let header = read_header(&server.current_file()).unwrap();
+    let new_sk = a.pending.as_ref().unwrap();
+    assert_eq!(
+        vault_core::credentials::resolve_pending_secret_key(&header, PW2, new_sk, new_sk),
+        Ok(PendingKeyOutcome::Landed)
+    );
+}

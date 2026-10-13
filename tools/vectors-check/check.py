@@ -1,7 +1,8 @@
 """Independent check of spec/vectors/ against spec/format.md.
 
-Re-derives every value from the inputs with argon2-cffi, PyNaCl, and the standard library, and
-implements the body rules, the merge rule, local edits, and the sync decisions from the spec text.
+Re-derives every value from the inputs with argon2-cffi, PyNaCl, ada-url (a WHATWG URL parser),
+and the standard library, and implements the body rules, the merge rule, local edits, the sync
+decisions, and autofill matching from the spec text.
 It shares no code with vault-core. Run from the repository root:
 
     python3 -I tools/vectors-check/check.py
@@ -9,12 +10,14 @@ It shares no code with vault-core. Run from the repository root:
 
 import hashlib
 import hmac
+import ipaddress
 import json
 import pathlib
+import re
 import sys
 import unicodedata
-import urllib.parse
 
+import ada_url
 from argon2.low_level import Type, hash_secret_raw
 from nacl.bindings import (
     crypto_aead_xchacha20poly1305_ietf_decrypt as xc_open,
@@ -668,55 +671,29 @@ def pct_decode(s):
         raise Fail("input.setup_text")
 
 
-def whatwg_ipv4(host):
-    """The WHATWG IPv4 parser for the shorthand forms, or None when the host is a domain."""
-    parts = host.split(".")
-    if parts and parts[-1] == "" and len(parts) > 1:
-        parts = parts[:-1]
-    last = parts[-1]
-    if not (last.isdigit() or last.lower().startswith("0x")):
-        return None
-    nums = []
-    for p in parts:
-        base = 10
-        if p.lower().startswith("0x"):
-            p, base = p[2:] or "0", 16
-        elif len(p) > 1 and p.startswith("0"):
-            p, base = p[1:], 8
-        try:
-            nums.append(int(p, base))
-        except ValueError:
-            raise Fail("input.server_url")
-    if len(nums) > 4 or any(n > 255 for n in nums[:-1]) or nums[-1] >= 256 ** (5 - len(nums)):
-        raise Fail("input.server_url")
-    v = nums[-1]
-    for i, n in enumerate(nums[:-1]):
-        v += n * 256 ** (3 - i)
-    return ".".join(str((v >> s) & 255) for s in (24, 16, 8, 0))
-
-
 def server_url(text):
-    """The setup rules for a server URL, with the parts of WHATWG parsing these vectors need:
-    a lower-cased host, IPv4 shorthand, a default port dropped, and an empty path made "/"."""
-    if "#" in text:
+    """The setup rules for a server URL, after WHATWG parsing with ada-url (which applies the
+    UTS 46 host processing): no user information, no fragment, a host that is an IPv4 address,
+    an IPv6 address, or a domain whose labels are each 1 to 63 characters from a-z, 0-9, and -,
+    and a scheme of https, or http to localhost, 127.0.0.1, or [::1]. Returns the serialised URL
+    and the host."""
+    try:
+        u = ada_url.URL(text)
+    except ValueError:
         raise Fail("input.server_url")
-    u = urllib.parse.urlsplit(text)
-    if u.scheme not in ("http", "https") or not u.netloc:
+    if u.protocol not in ("http:", "https:") or u.username or u.password or "#" in u.href:
         raise Fail("input.server_url")
-    if "@" in u.netloc:
+    host = u.hostname
+    # host_type: 0 for a domain, 1 for IPv4, 2 for IPv6. Firefox builds a host permission from a
+    # domain, so each of its labels is checked.
+    if u.host_type == 0 and not all(
+        1 <= len(lb) <= 63 and all(c in "abcdefghijklmnopqrstuvwxyz0123456789-" for c in lb)
+        for lb in host.split(".")
+    ):
         raise Fail("input.server_url")
-    host = u.hostname or ""
-    ipv4 = None if ":" in host else whatwg_ipv4(host)
-    host = ipv4 or host
-    if u.scheme == "http" and host not in ("localhost", "127.0.0.1", "::1"):
+    if u.protocol == "http:" and host not in ("localhost", "127.0.0.1", "[::1]"):
         raise Fail("input.server_url")
-    port = u.port
-    if port == {"http": 80, "https": 443}[u.scheme]:
-        port = None
-    shown = f"[{host}]" if ":" in host else host
-    path = urllib.parse.quote(u.path or "/", safe="/:@!$&'()*+,;=-._~%")
-    query = "?" + urllib.parse.quote(u.query, safe="/:@!$&'()*+,;=?-._~%") if u.query else ""
-    return f"{u.scheme}://{shown}{'' if port is None else ':' + str(port)}{path}{query}", host
+    return u.href, host
 
 
 def parse_setup(text):
@@ -745,6 +722,142 @@ def parse_setup(text):
             raise Fail("input.fingerprint")
         fp = got["fp"]
     return url, tok, fp
+
+
+# Autofill matching
+
+
+def af_parse(text):
+    """A WHATWG URL with scheme http or https, as matching sees it, or None."""
+    try:
+        u = ada_url.URL(text)
+    except ValueError:
+        return None
+    if u.protocol not in ("http:", "https:") or not u.hostname:
+        return None
+    kind = {0: "domain", 1: "ipv4", 2: "ipv6"}[u.host_type]
+    host = u.hostname
+    if kind == "domain" and host.endswith("."):
+        host = host[:-1]
+    if kind == "domain" and "" in host.split("."):
+        return None
+    # The query is present when `?` follows the scheme in the URL without its fragment; ada's
+    # `search` is empty both for no query and for an empty one.
+    rest = u.href.split("#", 1)[0][len(u.protocol) :]
+    pq = u.pathname + ("?" + u.search[1:] if "?" in rest else "")
+    port = int(u.port) if u.port else None
+    scheme = u.protocol[:-1]
+    origin = f"{scheme}://{host}" + (f":{port}" if port is not None else "")
+    return {"scheme": scheme, "host": host, "kind": kind, "port": port, "path_query": pq,
+            "origin": origin}
+
+
+def af_prepare(uri):
+    t = uri.strip(" \t\n\f\r")
+    t = t if re.match(r"[A-Za-z][A-Za-z0-9+.-]*://", t) else "https://" + t
+    try:
+        u = ada_url.URL(t)
+    except ValueError:
+        return None
+    if u.username or u.password:
+        return None
+    return af_parse(t)
+
+
+def af_view(p):
+    if p is None:
+        return None
+    return {k: p[k] for k in ("scheme", "host", "port", "path_query", "origin")}
+
+
+class BadSuffix(Exception):
+    """A known-suffix answer that is neither the whole host nor its trailing labels."""
+
+
+def af_suffix(p, lookup):
+    if p["kind"] != "domain":
+        return None
+    s = lookup(p["host"])
+    if s is None:
+        return None
+    if s and (p["host"] == s or p["host"].endswith("." + s)):
+        return s
+    raise BadSuffix()
+
+
+def af_registrable(p, lookup):
+    s = af_suffix(p, lookup)
+    if s is None or s == p["host"]:
+        return p["host"]
+    label = p["host"][: -len(s) - 1].split(".")[-1]
+    return f"{label}.{s}"
+
+
+def af_local(p, lookup):
+    if p["kind"] == "domain":
+        h_ = p["host"]
+        return af_suffix(p, lookup) is None or h_ == "home.arpa" or h_.endswith(".home.arpa")
+    a = ipaddress.ip_address(p["host"].strip("[]"))
+    nets = (["127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "169.254.0.0/16"]
+            if p["kind"] == "ipv4" else ["::1/128", "fc00::/7", "fe80::/10"])
+    return any(a in ipaddress.ip_network(n) for n in nets)
+
+
+def af_match(page, uri, mode, lookup):
+    item = af_prepare(uri)
+    if item is None:
+        return "none"
+    try:
+        af_suffix(page, lookup)
+        af_suffix(item, lookup)
+    except BadSuffix:
+        return "none"
+    same_origin = page["origin"] == item["origin"]
+    holds = {
+        "base_domain": af_registrable(page, lookup) == af_registrable(item, lookup),
+        "host": page["host"] == item["host"] and page["port"] == item["port"],
+        "starts_with": same_origin and page["path_query"].startswith(item["path_query"]),
+        "exact": same_origin and page["path_query"] == item["path_query"],
+    }.get(mode, False)
+    if not holds:
+        return "none"
+    if item["scheme"] == "https" and page["scheme"] == "http":
+        return "confirm" if af_local(page, lookup) else "none"
+    return "fill"
+
+
+AF_RANK = {"none": 0, "confirm": 1, "fill": 2}
+
+
+def af_candidates(page_text, items, lookup):
+    page = af_parse(page_text)
+    if page is None:
+        return []
+    out = []
+    for it in items:
+        best = "none"
+        if it["type"] == "login":
+            for u in it["uris"]:
+                o = af_match(page, u["uri"], u["match"], lookup)
+                if AF_RANK[o] > AF_RANK[best]:
+                    best = o
+        if best != "none":
+            out.append((it, best))
+    out.sort(key=lambda x: (-AF_RANK[x[1]], x[0]["name"], x[0]["id"]))
+    return out
+
+
+def af_save(page_text, user, password, items, lookup):
+    page = af_parse(page_text)
+    if page is None or password == "":
+        return {"action": "none"}
+    same = [it for it, o in af_candidates(page_text, items, lookup)
+            if o == "fill" and it["username"] == user]
+    if any(it["password"] == password for it in same):
+        return {"action": "none"}
+    if same:
+        return {"action": "update", "id": same[0]["id"]}
+    return {"action": "new", "name": page["host"], "uri": page["origin"], "match": "base_domain"}
 
 
 # File checks
@@ -1015,6 +1128,50 @@ def run(ck):
                 ck.eq(w, (v[0], v[1].hex(), v[2]), (c["url"], c["token"], c["fp"]))
         else:
             ck.eq(f"setup {c['name']}", sha256(h(c["cert_der"])).hex() == c["fp"], c["matches"])
+
+    top = load("autofill.json")
+    table, answers = top["known_suffixes"], top["suffix_answers"]
+
+    def lookup(host):
+        if host in answers:
+            return answers[host]
+        fits = [t for t in table if host == t or host.endswith("." + t)]
+        return max(fits, key=len) if fits else None
+
+    ops = {}
+    for c in top["cases"]:
+        w, op = f"autofill {c['name']}", c["op"]
+        ops[op] = ops.get(op, 0) + 1
+        if op == "prepare":
+            got = af_view(af_prepare(c["uri"]))
+        elif op == "page":
+            got = af_view(af_parse(c["url"]))
+        elif op == "registrable":
+            try:
+                got = af_registrable(af_parse(c["url"]), lookup)
+            except BadSuffix:
+                got = None
+        elif op == "match":
+            pg = af_parse(c["page"])
+            got = "none" if pg is None else af_match(pg, c["uri"], c["match"], lookup)
+        elif op == "items":
+            got = [{"id": it["id"], "outcome": o} for it, o in af_candidates(c["page"], c["items"], lookup)]
+        elif op == "frames":
+            top_url = af_parse(c["top"])
+            got = [] if top_url is None else [
+                f["id"] for f in c["frames"]
+                if (fp := af_parse(f["url"])) is not None and fp["origin"] == top_url["origin"]]
+        elif op == "save":
+            got = af_save(c["page"], c["username"], c["password"], c["items"], lookup)
+        else:
+            ck.failures.append(f"{w}: unknown op {op!r}")
+            continue
+        ck.eq(w, got, c["result"])
+    print("autofill cases by op:", ", ".join(f"{k} {v}" for k, v in sorted(ops.items())))
+    minimums = {"prepare": 40, "page": 8, "registrable": 15, "match": 100, "items": 5, "frames": 3,
+                "save": 10}
+    for op, least in minimums.items():
+        ck.eq(f"autofill has at least {least} {op} cases", ops.get(op, 0) >= least, True)
 
 
 def main():

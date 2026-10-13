@@ -378,33 +378,6 @@ fn login_uri(
     })
 }
 
-/// The fields of `current` with the keys of the text form that the user changed from `base` to
-/// `edited`, so a change that reached `current` while the editor was open (a sync, or another
-/// command) is kept wherever the user did not touch the same key. Lists (custom fields and URIs)
-/// count as one key each.
-pub fn apply_changes(base: &ItemFields, edited: &ItemFields, current: &ItemFields) -> ItemFields {
-    fn pick<T: Clone + PartialEq>(base: &T, edited: &T, current: &T) -> T {
-        if edited == base {
-            current.clone()
-        } else {
-            edited.clone()
-        }
-    }
-    let mut out = current.clone();
-    out.name = pick(&base.name, &edited.name, &current.name);
-    out.folder = pick(&base.folder, &edited.folder, &current.folder);
-    out.favourite = pick(&base.favourite, &edited.favourite, &current.favourite);
-    out.notes = pick(&base.notes, &edited.notes, &current.notes);
-    out.fields = pick(&base.fields, &edited.fields, &current.fields);
-    if let (Some(b), Some(e), Some(c)) = (&base.login, &edited.login, &mut out.login) {
-        c.username = pick(&b.username, &e.username, &c.username);
-        c.password = pick(&b.password, &e.password, &c.password);
-        c.totp = pick(&b.totp, &e.totp, &c.totp);
-        c.uris = pick(&b.uris, &e.uris, &c.uris);
-    }
-    out
-}
-
 /// The fields of a new login or note.
 pub fn new_fields(name: &str, folder: &str, login: Option<Login>) -> ItemFields {
     ItemFields {
@@ -524,41 +497,6 @@ pub fn summary_json(item: &Item) -> Value {
         ),
         ("review", item.review.as_deref().map_or(Value::Null, s)),
     ])
-}
-
-/// Whether `item` is in `folder` or a folder under it.
-pub fn in_folder(item: &Item, folder: &str) -> bool {
-    let folder = folder.trim_matches('/');
-    item.fields().is_some_and(|f| {
-        f.folder == folder
-            || (f.folder.len() > folder.len()
-                && f.folder.starts_with(folder)
-                && f.folder.as_bytes()[folder.len()] == b'/')
-    })
-}
-
-/// Whether `text` occurs, without regard to case, in the item's name, folder, username, or URIs.
-pub fn matches_text(item: &Item, text: &str) -> bool {
-    let q = text.to_lowercase();
-    let has = |s: &str| s.to_lowercase().contains(&q);
-    let Some(f) = item.fields() else {
-        return false;
-    };
-    has(&f.name)
-        || has(&f.folder)
-        || item
-            .login()
-            .is_some_and(|l| has(&l.username) || l.uris.iter().any(|u| has(&u.uri)))
-}
-
-/// Items sorted for listing: by folder, then name, without regard to case; unknown types last.
-pub fn sorted(items: Vec<&Item>) -> Vec<&Item> {
-    let mut items = items;
-    items.sort_by_cached_key(|i| match i.fields() {
-        Some(f) => (0, f.folder.to_lowercase(), f.name.to_lowercase()),
-        None => (1, String::new(), i.id.clone()),
-    });
-    items
 }
 
 /// One line of `ls` and `find`: ID prefix, type marker, `folder/name`, and the username.
@@ -691,43 +629,6 @@ mod tests {
     }
 
     #[test]
-    fn changes_apply_onto_the_current_item() {
-        let b = body();
-        let base = b.items[0].fields().unwrap().clone();
-        // Meanwhile, a sync moved the item, changed its username, and retired a password.
-        let mut current = base.clone();
-        current.folder = "Moved".into();
-        current.login.as_mut().unwrap().username = "synced".into();
-        current
-            .password_history
-            .push(vault_core::body::HistoryEntry {
-                password: "older".into(),
-                retired: 9,
-                extra: Map::new(),
-            });
-        // The user changed only the password and the notes.
-        let mut edited = base.clone();
-        edited.login.as_mut().unwrap().password = "typed".into();
-        edited.notes = "new notes".into();
-        let out = apply_changes(&base, &edited, &current);
-        assert_eq!(out.folder, "Moved");
-        assert_eq!(out.notes, "new notes");
-        let l = out.login.as_ref().unwrap();
-        assert_eq!(
-            (l.username.as_str(), l.password.as_str()),
-            ("synced", "typed")
-        );
-        assert_eq!(l.passkeys.len(), 1);
-        assert_eq!(
-            out.password_history.len(),
-            1,
-            "history from the current item"
-        );
-        // No change from the user: the current item stays as it is.
-        assert!(apply_changes(&base, &base, &current) == current);
-    }
-
-    #[test]
     fn the_text_form_buffer_never_grows() {
         let mut b = body();
         if let ItemData::Known(f) = &mut b.items[0].data {
@@ -784,12 +685,8 @@ mod tests {
     }
 
     #[test]
-    fn folders_and_text() {
+    fn field_values() {
         let b = body();
-        assert!(in_folder(&b.items[0], "Work"));
-        assert!(!in_folder(&b.items[0], "Wor"));
-        assert!(matches_text(&b.items[0], "A.EXAMPLE"));
-        assert!(!matches_text(&b.items[3], "card"));
         assert_eq!(field_value(&b.items[0], "code").unwrap(), "s3cret");
         assert_eq!(
             field_value(&b.items[0], "uri").unwrap(),

@@ -119,14 +119,19 @@ fn read_setup_text() -> Result<ServerConfig> {
     let text: SecretString = prompt::hidden_line("Setup text from `vault serve token add`: ")?;
     vault_core::setup::parse_setup(&text)
         .map(ServerConfig::from_setup)
-        .map_err(|e| {
-            CliError::new(
-                Exit::Usage,
-                e.code(),
-                "the setup text does not parse: it is `vault://setup?url=...&token=...`, with an \
-                 https URL, or http to localhost, 127.0.0.1, or [::1]",
-            )
-        })
+        .map_err(setup_text_error)
+}
+
+/// The error for setup text that does not parse.
+fn setup_text_error(e: vault_core::Error) -> CliError {
+    CliError::new(
+        Exit::Usage,
+        e.code(),
+        "the setup text does not parse: it is `vault://setup?url=...&token=...`, where the URL is \
+         https, or http to localhost, 127.0.0.1, or [::1]; its host is an IP address or a name of \
+         dot-separated labels of 1 to 63 characters from a-z, 0-9, and -; and it has no user \
+         information or fragment",
+    )
 }
 
 /// `vault init`.
@@ -353,7 +358,26 @@ pub fn key_show(ctx: &Ctx, with_qr: bool) -> Result<JsonResult> {
 
 #[cfg(test)]
 mod tests {
-    use super::kit_group;
+    use super::{kit_group, setup_text_error};
+
+    #[test]
+    fn a_refused_host_gets_the_url_rule() {
+        let token = vault_core::token::encode(&vault_core::secret::Token::from_bytes([0; 20]));
+        let text = format!(
+            "vault://setup?url=https%3A%2F%2F%2A%2F&token={}",
+            token.as_str()
+        );
+        let e = vault_core::setup::parse_setup(&text)
+            .err()
+            .expect("a * host is refused");
+        let e = setup_text_error(e);
+        assert_eq!(e.code(), "input.server_url");
+        assert!(
+            e.message().contains("its host is an IP address or a name"),
+            "{}",
+            e.message()
+        );
+    }
 
     #[test]
     fn kit_groups_read_like_the_secret_key_decoder() {

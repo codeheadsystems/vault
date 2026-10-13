@@ -1,15 +1,17 @@
 //! The commit rule. A caller reads the state, runs a procedure without holding its lock, and
 //! commits the result under the lock. Commands may have changed the state on disk meanwhile.
+//! [`apply`] carries out a commit together with its secret key change, in a safe order, through
+//! the storage a host supplies.
 
 use crate::error::ClientError;
-use crate::machine::{Finished, Save};
+use crate::machine::{Finished, Save, SecretKeyChange};
 use crate::run::item_names;
-use crate::state::ClientState;
+use crate::state::{ClientState, SecretKeyStore};
 use vault_core::clock::{BUILD_TIME_MS, check_clock};
 use vault_core::file::{open_file, seal_file_with_rng};
 use vault_core::merge::{merge, same_content};
 use vault_core::rng::Rng;
-use vault_core::secret::VaultKey;
+use vault_core::secret::{SecretKey, VaultKey};
 
 /// What to write after a procedure.
 pub struct Commit {
@@ -173,4 +175,134 @@ fn sync_part(
         &s.retired,
         s.pending_secret_key,
     )
+}
+
+/// The storage a host supplies to [`apply`]: the secret key store and the state file. The host
+/// holds its lock around the whole call.
+pub trait CommitHost {
+    /// The host's storage error.
+    type Error;
+    /// Stores `key` as the current secret key of `vault_id` in `store`.
+    fn store_current(
+        &mut self,
+        store: SecretKeyStore,
+        vault_id: &[u8; 16],
+        key: &SecretKey,
+    ) -> Result<(), Self::Error>;
+    /// Copies the pending secret key of `vault_id` to the current slot, keeping the pending
+    /// slot. Fails when there is no pending key.
+    fn copy_pending_to_current(
+        &mut self,
+        store: SecretKeyStore,
+        vault_id: &[u8; 16],
+    ) -> Result<(), Self::Error>;
+    /// Deletes the pending secret key of `vault_id`; an empty slot is not an error.
+    fn delete_pending(
+        &mut self,
+        store: SecretKeyStore,
+        vault_id: &[u8; 16],
+    ) -> Result<(), Self::Error>;
+    /// Writes the state atomically.
+    fn write_state(&mut self, state: &ClientState) -> Result<(), Self::Error>;
+}
+
+/// Why [`apply`] failed. Nothing after the failed write ran.
+#[derive(Debug)]
+pub enum ApplyError<E> {
+    /// The commit rule refused, other than for [`ClientError::Superseded`]; nothing was written.
+    Client(ClientError),
+    /// The host's storage failed before the state was written.
+    Host(E),
+}
+
+impl<E> From<ClientError> for ApplyError<E> {
+    fn from(e: ClientError) -> Self {
+        ApplyError::Client(e)
+    }
+}
+
+/// A commit that [`apply`] carried out.
+pub struct Applied<E> {
+    /// What was committed.
+    pub commit: Commit,
+    /// The error of the last step, deleting the pending secret key, when it failed after the
+    /// state was written. The commit stands; the pending slot holds a key nothing uses, which
+    /// the next `--new-secret-key` replaces.
+    pub pending_left: Option<E>,
+}
+
+/// Commits the end of a procedure and its secret key change through `host`. Call it under the
+/// host's lock, with `on_disk` read under that lock.
+///
+/// The writes run in this order:
+///
+/// 1. The key the new state needs: a new current secret key ([`SecretKeyChange::Replace`] and
+///    [`SecretKeyChange::ReplaceAndDiscardPending`]), or a copy of the pending key to the
+///    current slot ([`SecretKeyChange::PromotePending`]).
+/// 2. The state, unless the state on disk already equals the result; the key writes of steps 1
+///    and 3 run either way.
+/// 3. Deleting the pending key ([`SecretKeyChange::PromotePending`],
+///    [`SecretKeyChange::DiscardPending`], and [`SecretKeyChange::ReplaceAndDiscardPending`]).
+///
+/// What the order guarantees when the host stops after any write:
+///
+/// - After step 1 alone, the current slot holds the key that opens the remote's wrap, and the
+///   state on disk is the one the procedure started from. With a pending key, the pending slot
+///   still holds the same key, so the next sync settles it as landed. After a replaced key, the
+///   next sync finds the remote under a wrap that the stored key opens. In both cases the local
+///   file on disk is still under the old wrap, and the old secret key is gone from the store:
+///   local changes that the remote does not hold open only with a cached vault key, and
+///   without one the next sync asks to discard them.
+/// - After step 2, the state needs only the current key; a pending key left in its slot is
+///   unused.
+///
+/// Returns `None` when another sync or credential change committed first
+/// ([`ClientError::Superseded`]): nothing is written, and the caller reports the procedure's
+/// own result.
+pub fn apply<T, H: CommitHost>(
+    finished: &Finished<T>,
+    started: &ClientState,
+    on_disk: &ClientState,
+    background: bool,
+    now: u64,
+    rng: &mut dyn Rng,
+    host: &mut H,
+) -> Result<Option<Applied<H::Error>>, ApplyError<H::Error>> {
+    let c = match finished.commit(started, on_disk, background, now, rng) {
+        Err(ClientError::Superseded) => return Ok(None),
+        r => r?,
+    };
+    let target = c.state.as_ref().unwrap_or(on_disk);
+    let (store, id) = (target.secret_key_store, target.vault_id);
+    let delete_pending = match &finished.secret_key {
+        None => false,
+        Some(SecretKeyChange::Replace(sk)) => {
+            host.store_current(store, &id, sk)
+                .map_err(ApplyError::Host)?;
+            false
+        }
+        Some(SecretKeyChange::ReplaceAndDiscardPending(sk)) => {
+            host.store_current(store, &id, sk)
+                .map_err(ApplyError::Host)?;
+            true
+        }
+        Some(SecretKeyChange::PromotePending) => {
+            host.copy_pending_to_current(store, &id)
+                .map_err(ApplyError::Host)?;
+            true
+        }
+        Some(SecretKeyChange::DiscardPending) => true,
+    };
+    if let Some(s) = &c.state {
+        host.write_state(s).map_err(ApplyError::Host)?;
+    }
+    let pending_left = if delete_pending {
+        host.delete_pending(store, &id).err()
+    } else {
+        None
+    };
+    Ok(Some(Applied {
+        commit: c,
+        pending_left,
+    }))
 }

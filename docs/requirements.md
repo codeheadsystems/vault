@@ -237,6 +237,8 @@ The server is dumb. It stores bytes and tokens, and nothing else:
   pin enforced by Firefox.
 - An exception belongs to one host name and port. `localhost` and `127.0.0.1` are separate, so the
   extension uses the exact host name the exception was accepted for.
+- The extension's host permission names the server's host without a port: Firefox grants a pattern
+  with a port but never matches it. A permission without a port covers every port of that host.
 - When `vault serve` runs on the same machine as Firefox, the extension uses `http://localhost` and
   no certificate is involved. Firefox exempts loopback from the Manifest V3 default
   `upgrade-insecure-requests` and from HTTPS-Only Mode.
@@ -366,14 +368,22 @@ field (stored in v1.0, used in v1.1), and a `passkeys` list (stored in v1.0, use
 ## Autofill matching
 
 These rules hold on every client that fills, and the threat model's web page and Android app rows
-depend on them.
+depend on them. The matching rules themselves are normative in the spec
+([Autofill matching](../spec/format.md#autofill-matching)) with test vectors, and are implemented
+once in `vault-client`, so Firefox and Android cannot drift apart.
 
 Firefox:
 
 - Base domain means the registrable domain (eTLD+1) from the Public Suffix List. An item for one
-  `github.io` site does not match another.
-- An `https` URI never fills an `http` page without a confirmation.
-- Fill reaches only frames whose origin matches the item. A cross-origin iframe is never filled.
+  `github.io` site does not match another, and a host under a suffix the list does not know, such
+  as `nas.lan`, matches only itself.
+- Matching uses the URL of the tab's top frame. An `https` URI never fills an `http` page, except
+  on a local host (loopback, a private address, or a name such as `nas.lan`), and there only after
+  a confirmation. A user on a public network clicks through a confirmation too easily for it to
+  protect a public site.
+- Fill reaches only the top frame and frames with the same origin as the top frame. A cross-origin
+  iframe is never filled. The fill script checks the origin it runs in before writing anything, so
+  a frame that navigates while the user picks an item receives nothing.
 - The origin comes from the browser (the message sender and the tab URL), never from the page or a
   message a content script relays from it.
 - The decrypted vault stays in the background script. A content script receives only the one
@@ -543,7 +553,8 @@ with zero unexplained losses.
    vectors.
 2. Server and CLI, including import and export. Exit: daily CLI use for 2 weeks alongside Bitwarden.
 3. Firefox extension. First, confirm the transport test results from a background script as well
-   as an extension page. Exit: Bitwarden extension removed.
+   as an extension page (confirmed 2026-10-12 from a Manifest V3 event page, with
+   `'wasm-unsafe-eval'` in the content security policy). Exit: Bitwarden extension removed.
 4. Android app. Exit: Bitwarden uninstalled from the phone; v1.0 tagged; Bitwarden account closed.
 5. v1.1 TOTP, then v1.2 WebAuthn.
 
@@ -589,7 +600,9 @@ settles the details:
 
 - CLI agent socket in `$XDG_RUNTIME_DIR`, mode 0600, with an `SO_PEERCRED` user check.
 - Clipboard: password-manager MIME hints (`x-kde-passwordManagerHint`) so clipboard managers skip
-  copied secrets; clearing after 45 seconds does not purge a manager's history.
+  copied secrets; clearing after 45 seconds does not purge a manager's history. Firefox refuses
+  custom clipboard types, so the extension copies without the hint, and a clipboard manager may
+  keep what it copies.
 - WebAuthn (v1.2): RP ID checked against the origin the browser reports; signature counter fixed at
   0, because synced passkeys and last-writer-wins merge make counters go backwards; UV flag set only
   after a real unlock; cross-origin iframe calls handled. Passkeys registered on two devices for the

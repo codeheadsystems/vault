@@ -92,6 +92,7 @@ vault sync
 | [vault serve](docs/serve.md) | Server commands, data directory, request handling, and retention |
 | [CLI](docs/cli.md) | Commands, local state, agent, sync behaviour, and output |
 | [Bitwarden](docs/bitwarden.md) | Import and export mapping |
+| [Firefox extension](docs/firefox.md) | Extension design: storage, fill, save offers, and setup |
 
 ## Licence
 

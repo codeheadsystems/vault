@@ -40,8 +40,11 @@
 //! # }
 //! ```
 
+pub mod autofill;
 pub mod commit;
+pub mod edit;
 pub mod error;
+pub mod items;
 pub mod machine;
 pub mod passwd;
 pub mod recover;

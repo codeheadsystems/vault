@@ -101,16 +101,6 @@ pub trait SecretStore {
     fn put(&self, vault_id: &[u8; 16], slot: Slot, key: &SecretKey) -> Result<(), SecretsError>;
     /// Empties `slot`; an empty slot is not an error.
     fn delete(&self, vault_id: &[u8; 16], slot: Slot) -> Result<(), SecretsError>;
-
-    /// Moves the pending key to the current slot, and empties the pending slot. Without a
-    /// pending key, nothing changes.
-    fn promote_pending(&self, vault_id: &[u8; 16]) -> Result<(), SecretsError> {
-        let Some(key) = self.get(vault_id, Slot::Pending)? else {
-            return Ok(());
-        };
-        self.put(vault_id, Slot::Current, &key)?;
-        self.delete(vault_id, Slot::Pending)
-    }
 }
 
 /// The store of `kind`; `data_dir` is where the file store keeps `secret-key`.
@@ -380,12 +370,12 @@ mod tests {
         assert!(text.contains(&hex::encode(a)));
         assert!(text.contains(&"cc".repeat(16)));
 
-        s.promote_pending(&a).unwrap();
+        // Promotion as the commit does it: copy, then delete the pending slot.
+        s.put(&a, Slot::Current, &key(0xcc)).unwrap();
+        s.delete(&a, Slot::Pending).unwrap();
         assert_eq!(get(&*s, &a, Slot::Current), Some([0xcc; 16]));
         assert_eq!(get(&*s, &a, Slot::Pending), None);
-        // Without a pending key, promotion changes nothing.
-        s.promote_pending(&a).unwrap();
-        assert_eq!(get(&*s, &a, Slot::Current), Some([0xcc; 16]));
+        s.delete(&a, Slot::Pending).unwrap();
 
         s.delete(&a, Slot::Current).unwrap();
         s.delete(&a, Slot::Current).unwrap();
@@ -471,7 +461,8 @@ mod tests {
         s.put(&id, Slot::Current, &key(0x12)).unwrap();
         s.put(&id, Slot::Pending, &key(0x13)).unwrap();
         assert_eq!(get(&*s, &id, Slot::Current), Some([0x12; 16]));
-        s.promote_pending(&id).unwrap();
+        s.put(&id, Slot::Current, &key(0x13)).unwrap();
+        s.delete(&id, Slot::Pending).unwrap();
         assert_eq!(get(&*s, &id, Slot::Current), Some([0x13; 16]));
         assert_eq!(get(&*s, &id, Slot::Pending), None);
         s.delete(&id, Slot::Current).unwrap();

@@ -198,17 +198,6 @@ pub mod secrets {
             .delete(vault_id, slot)
             .map_err(error)
     }
-
-    /// Moves the pending key to the current slot.
-    pub fn promote_pending(
-        paths: &Paths,
-        store: SecretKeyStore,
-        vault_id: &[u8; 16],
-    ) -> Result<()> {
-        crate::secrets::open(kind(store), &paths.data)
-            .promote_pending(vault_id)
-            .map_err(error)
-    }
 }
 
 /// The agent.

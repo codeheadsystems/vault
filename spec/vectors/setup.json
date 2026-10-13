@@ -171,6 +171,116 @@
       "op": "parse"
     },
     {
+      "error": "input.server_url",
+      "input": "vault://setup?url=https%3A%2F%2F%2A&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "host *",
+      "op": "parse"
+    },
+    {
+      "error": "input.server_url",
+      "input": "vault://setup?url=https%3A%2F%2F%2A.example&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "host *.example",
+      "op": "parse"
+    },
+    {
+      "error": "input.server_url",
+      "input": "vault://setup?url=https%3A%2F%2Fvault_1.example&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "_ in a label",
+      "op": "parse"
+    },
+    {
+      "error": "input.server_url",
+      "input": "vault://setup?url=https%3A%2F%2Fa..b&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "an empty label",
+      "op": "parse"
+    },
+    {
+      "error": "input.server_url",
+      "input": "vault://setup?url=https%3A%2F%2Fvault.example.&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "a trailing dot",
+      "op": "parse"
+    },
+    {
+      "error": "input.server_url",
+      "input": "vault://setup?url=https%3A%2F%2Faaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.example&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "a 64-character label",
+      "op": "parse"
+    },
+    {
+      "fp": null,
+      "input": "vault://setup?url=https%3A%2F%2Faaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.example&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "a 63-character label",
+      "op": "parse",
+      "token": "303132333435363738393a3b3c3d3e3f40414243",
+      "url": "https://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.example/"
+    },
+    {
+      "fp": null,
+      "input": "vault://setup?url=https%3A%2F%2Fxn--bcher-kva.example&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "an xn-- host",
+      "op": "parse",
+      "token": "303132333435363738393a3b3c3d3e3f40414243",
+      "url": "https://xn--bcher-kva.example/"
+    },
+    {
+      "fp": null,
+      "input": "vault://setup?url=https%3A%2F%2Fb%C3%BCcher.example&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "a Unicode host parses to xn--",
+      "op": "parse",
+      "token": "303132333435363738393a3b3c3d3e3f40414243",
+      "url": "https://xn--bcher-kva.example/"
+    },
+    {
+      "fp": null,
+      "input": "vault://setup?url=https%3A%2F%2FVAULT-1.Example%3A8443&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "upper case and a hyphen",
+      "op": "parse",
+      "token": "303132333435363738393a3b3c3d3e3f40414243",
+      "url": "https://vault-1.example:8443/"
+    },
+    {
+      "fp": null,
+      "input": "vault://setup?url=https%3A%2F%2F%5Bfe80%3A%3A1%5D%3A8443&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "an IPv6 host",
+      "op": "parse",
+      "token": "303132333435363738393a3b3c3d3e3f40414243",
+      "url": "https://[fe80::1]:8443/"
+    },
+    {
+      "error": "input.server_url",
+      "input": "vault://setup?url=https%3A%2F%2F%EF%BC%8A.example&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "fullwidth ＊ maps to *",
+      "op": "parse"
+    },
+    {
+      "fp": null,
+      "input": "vault://setup?url=https%3A%2F%2FB%C3%9CCHER.example&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "upper-case Unicode is lower-cased",
+      "op": "parse",
+      "token": "303132333435363738393a3b3c3d3e3f40414243",
+      "url": "https://xn--bcher-kva.example/"
+    },
+    {
+      "error": "input.server_url",
+      "input": "vault://setup?url=https%3A%2F%2F&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "an empty host",
+      "op": "parse"
+    },
+    {
+      "error": "input.server_url",
+      "input": "vault://setup?url=https%3A%2F%2F%252a.example&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "a percent-encoded *",
+      "op": "parse"
+    },
+    {
+      "fp": null,
+      "input": "vault://setup?url=https%3A%2F%2F-a.example&token=60RK4CSM6MV3EE1S78XKRF9Y7X042GJ3",
+      "name": "a label with a leading hyphen",
+      "op": "parse",
+      "token": "303132333435363738393a3b3c3d3e3f40414243",
+      "url": "https://-a.example/"
+    },
+    {
       "cert_der": "61206365727469666963617465277320444552206279746573",
       "fp": "c9274d7777492fc4f857062b1618c2c44e23fd9e00e3b71f88801d87a0d5ba1f",
       "matches": true,

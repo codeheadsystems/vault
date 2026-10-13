@@ -1,3 +1,4 @@
+ada-url==4.0.0
 argon2-cffi==25.1.0
 argon2-cffi-bindings==25.1.0
 PyNaCl==1.6.2

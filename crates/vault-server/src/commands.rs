@@ -1,7 +1,7 @@
 //! The commands that edit the data directory: `init` and `token add`, `ls`, and `rm`. The
 //! `revisions` commands live in [`crate::revisions`].
 
-use crate::config::{self, Config, HttpConfig, HttpsConfig};
+use crate::config::{self, Config, HttpConfig, HttpsConfig, URL_RULE};
 use crate::datadir::{self, CONFIG, DataDir, TLS, TOKENS};
 use crate::error::{Context, Result, invalid};
 use crate::revisions::Index;
@@ -50,11 +50,7 @@ pub struct InitReport {
 /// `serve.toml`.
 pub fn init(data: &DataDir, args: &InitArgs) -> Result<InitReport> {
     let Ok(url) = vault_core::setup::check_server_url(&args.url) else {
-        return invalid(format!(
-            "--url {:?} is not https, or http to localhost, 127.0.0.1, or [::1], without user \
-             information or a fragment",
-            args.url
-        ));
+        return invalid(format!("--url {:?} is refused: {URL_RULE}", args.url));
     };
     if url.loopback_http && args.http_listen.is_none() {
         return invalid("an http URL needs --http-listen");
@@ -160,9 +156,8 @@ pub fn token_add(data: &DataDir, args: &TokenAddArgs) -> Result<TokenAdded> {
     let config = Config::load(data)?;
     let url_text = args.url.as_deref().unwrap_or(&config.url);
     let Ok(url) = vault_core::setup::check_server_url(url_text) else {
-        return invalid(format!(
-            "{url_text:?} is not https, or http to localhost, 127.0.0.1, or [::1]"
-        ));
+        let what = if args.url.is_some() { "--url" } else { "url" };
+        return invalid(format!("{what} {url_text:?} is refused: {URL_RULE}"));
     };
     let fingerprint = if url.loopback_http || args.no_fp {
         None

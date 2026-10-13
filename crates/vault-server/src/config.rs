@@ -59,10 +59,7 @@ impl Config {
     /// loopback HTTP listener.
     pub(crate) fn check(&self) -> Result<()> {
         if vault_core::setup::check_server_url(&self.url).is_err() {
-            return invalid(format!(
-                "url {:?} is not https, or http to localhost, 127.0.0.1, or [::1]",
-                self.url
-            ));
+            return invalid(format!("url {:?} is refused: {URL_RULE}", self.url));
         }
         parse_quota(&self.quota)?;
         if self.https.is_none() && self.http.is_none() {
@@ -84,6 +81,11 @@ impl Config {
         toml::to_string(self).expect("a Config serialises")
     }
 }
+
+/// The rule a server URL follows, for the messages that refuse one.
+pub(crate) const URL_RULE: &str = "a server URL is https, or http to localhost, 127.0.0.1, or \
+     [::1]; its host is an IP address or a name of dot-separated labels of 1 to 63 characters \
+     from a-z, 0-9, and -; and it has no user information or fragment";
 
 /// Refuses an HTTP listener on an address other than loopback.
 pub(crate) fn check_http_listen(addr: SocketAddr) -> Result<()> {
@@ -174,9 +176,14 @@ mod tests {
         none.https = None;
         none.http = None;
         assert!(none.check().is_err());
-        let mut plain = c;
+        let mut plain = c.clone();
         plain.url = "http://nas.lan".into();
         assert!(plain.check().is_err());
+        let mut star = c;
+        star.url = "https://*/".into();
+        let msg = star.check().unwrap_err().to_string();
+        assert!(msg.starts_with("url \"https://*/\" is refused: "), "{msg}");
+        assert!(msg.ends_with(URL_RULE), "{msg}");
         assert!(
             toml::from_str::<Config>("url = \"https://a\"\nquota = \"1GiB\"\nx = 1\n").is_err()
         );

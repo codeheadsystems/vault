@@ -3,7 +3,14 @@
 Known-answer vectors for `spec/format.md`. Each file is generated from fixed inputs by
 `crates/vault-core/examples/gen_vectors.rs`, checked by `crates/vault-core/tests/vectors.rs`, and
 checked independently by `tools/vectors-check/check.py`, which derives every value from the spec
-text with argon2-cffi, PyNaCl, and the Python standard library.
+text with argon2-cffi, PyNaCl, ada-url, and the Python standard library.
+
+`autofill.json` is the exception: its expected values are written by hand from the spec text. It is
+checked by `crates/vault-client/tests/autofill.rs` and by `tools/vectors-check/check.py`, and the
+generator leaves it alone. Its `known_suffixes` table stands in for the Public Suffix List: the
+lookup returns the longest entry that equals the host or a sequence of its trailing labels, and
+`suffix_answers` replaces that answer for the hosts it lists, including answers the client must
+refuse.
 
 ## File layout
 

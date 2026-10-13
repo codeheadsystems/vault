@@ -16,6 +16,7 @@ insecure-test-kdf = ["vault-core/insecure-test-kdf"]
 [dependencies]
 vault-core = { path = "../vault-core" }
 hex.workspace = true
+url.workspace = true
 zeroize.workspace = true
 
 [dev-dependencies]

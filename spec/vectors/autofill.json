@@ -1,0 +1,2768 @@
+{
+ "cases": [
+  {
+   "name": "prepare: scheme-less domain",
+   "op": "prepare",
+   "result": {
+    "host": "github.com",
+    "origin": "https://github.com",
+    "path_query": "/",
+    "port": null,
+    "scheme": "https"
+   },
+   "uri": "github.com"
+  },
+  {
+   "name": "prepare: scheme-less host and port",
+   "op": "prepare",
+   "result": {
+    "host": "nas.lan",
+    "origin": "https://nas.lan:8443",
+    "path_query": "/",
+    "port": 8443,
+    "scheme": "https"
+   },
+   "uri": "nas.lan:8443"
+  },
+  {
+   "name": "prepare: leading and trailing ASCII whitespace",
+   "op": "prepare",
+   "result": {
+    "host": "example.com",
+    "origin": "https://example.com",
+    "path_query": "/login",
+    "port": null,
+    "scheme": "https"
+   },
+   "uri": " \t https://example.com/login \n"
+  },
+  {
+   "name": "prepare: only whitespace",
+   "op": "prepare",
+   "result": null,
+   "uri": "  \t "
+  },
+  {
+   "name": "prepare: empty",
+   "op": "prepare",
+   "result": null,
+   "uri": ""
+  },
+  {
+   "name": "prepare: a space inside the host",
+   "op": "prepare",
+   "result": null,
+   "uri": "https://exa mple.com"
+  },
+  {
+   "name": "prepare: androidapp scheme",
+   "op": "prepare",
+   "result": null,
+   "uri": "androidapp://com.example.app"
+  },
+  {
+   "name": "prepare: ftp scheme",
+   "op": "prepare",
+   "result": null,
+   "uri": "ftp://files.example.com/"
+  },
+  {
+   "name": "prepare: upper case scheme and host, trailing dot",
+   "op": "prepare",
+   "result": {
+    "host": "bank.com",
+    "origin": "https://bank.com",
+    "path_query": "/Login",
+    "port": null,
+    "scheme": "https"
+   },
+   "uri": "HTTPS://BANK.COM./Login"
+  },
+  {
+   "name": "prepare: user information never matches",
+   "op": "prepare",
+   "result": null,
+   "uri": "https://bank.com@evil.com"
+  },
+  {
+   "name": "prepare: empty user information is no user information",
+   "op": "prepare",
+   "result": {
+    "host": "bank.com",
+    "origin": "https://bank.com",
+    "path_query": "/",
+    "port": null,
+    "scheme": "https"
+   },
+   "uri": "https://@bank.com/"
+  },
+  {
+   "name": "prepare: a password alone is user information",
+   "op": "prepare",
+   "result": null,
+   "uri": "https://:pw@bank.com/"
+  },
+  {
+   "name": "prepare: scheme-less user information",
+   "op": "prepare",
+   "result": null,
+   "uri": "bank.com@evil.com"
+  },
+  {
+   "name": "prepare: a mailto URI has user information once prefixed",
+   "op": "prepare",
+   "result": null,
+   "uri": "mailto:someone@example.com"
+  },
+  {
+   "name": "prepare: hex IPv4",
+   "op": "prepare",
+   "result": {
+    "host": "127.0.0.1",
+    "origin": "https://127.0.0.1",
+    "path_query": "/",
+    "port": null,
+    "scheme": "https"
+   },
+   "uri": "https://0x7f.1/"
+  },
+  {
+   "name": "prepare: short IPv4 without a scheme",
+   "op": "prepare",
+   "result": {
+    "host": "127.0.0.1",
+    "origin": "https://127.0.0.1",
+    "path_query": "/",
+    "port": null,
+    "scheme": "https"
+   },
+   "uri": "127.1"
+  },
+  {
+   "name": "prepare: IPv6 compressed, default port dropped",
+   "op": "prepare",
+   "result": {
+    "host": "[::1]",
+    "origin": "https://[::1]",
+    "path_query": "/",
+    "port": null,
+    "scheme": "https"
+   },
+   "uri": "https://[0:0::1]:443/"
+  },
+  {
+   "name": "prepare: http default port dropped",
+   "op": "prepare",
+   "result": {
+    "host": "example.com",
+    "origin": "http://example.com",
+    "path_query": "/",
+    "port": null,
+    "scheme": "http"
+   },
+   "uri": "http://example.com:80/"
+  },
+  {
+   "name": "prepare: port 80 on https kept",
+   "op": "prepare",
+   "result": {
+    "host": "example.com",
+    "origin": "https://example.com:80",
+    "path_query": "/",
+    "port": 80,
+    "scheme": "https"
+   },
+   "uri": "https://example.com:80"
+  },
+  {
+   "name": "prepare: internationalised host",
+   "op": "prepare",
+   "result": {
+    "host": "xn--bcher-kva.de",
+    "origin": "https://xn--bcher-kva.de",
+    "path_query": "/",
+    "port": null,
+    "scheme": "https"
+   },
+   "uri": "https://Bücher.de/"
+  },
+  {
+   "name": "prepare: empty query is present, fragment dropped",
+   "op": "prepare",
+   "result": {
+    "host": "a.com",
+    "origin": "https://a.com",
+    "path_query": "/p?",
+    "port": null,
+    "scheme": "https"
+   },
+   "uri": "https://a.com/p?#frag"
+  },
+  {
+   "name": "prepare: query kept, fragment dropped",
+   "op": "prepare",
+   "result": {
+    "host": "a.com",
+    "origin": "https://a.com",
+    "path_query": "/p?x=1",
+    "port": null,
+    "scheme": "https"
+   },
+   "uri": "https://a.com/p?x=1#f"
+  },
+  {
+   "name": "prepare: fragment only",
+   "op": "prepare",
+   "result": {
+    "host": "a.com",
+    "origin": "https://a.com",
+    "path_query": "/p",
+    "port": null,
+    "scheme": "https"
+   },
+   "uri": "https://a.com/p#f"
+  },
+  {
+   "name": "page: https page",
+   "op": "page",
+   "result": {
+    "host": "example.com",
+    "origin": "https://example.com",
+    "path_query": "/",
+    "port": null,
+    "scheme": "https"
+   },
+   "url": "https://example.com/"
+  },
+  {
+   "name": "page: http on localhost with a port",
+   "op": "page",
+   "result": {
+    "host": "localhost",
+    "origin": "http://localhost:8080",
+    "path_query": "/x",
+    "port": 8080,
+    "scheme": "http"
+   },
+   "url": "http://localhost:8080/x"
+  },
+  {
+   "name": "page: about:blank",
+   "op": "page",
+   "result": null,
+   "url": "about:blank"
+  },
+  {
+   "name": "page: file URL",
+   "op": "page",
+   "result": null,
+   "url": "file:///etc/passwd"
+  },
+  {
+   "name": "page: extension page",
+   "op": "page",
+   "result": null,
+   "url": "moz-extension://abc/page.html"
+  },
+  {
+   "name": "page: data URL",
+   "op": "page",
+   "result": null,
+   "url": "data:text/html,hi"
+  },
+  {
+   "name": "page: a page URL's user information is ignored",
+   "op": "page",
+   "result": {
+    "host": "evil.com",
+    "origin": "https://evil.com",
+    "path_query": "/x",
+    "port": null,
+    "scheme": "https"
+   },
+   "url": "https://bank.com@evil.com/x"
+  },
+  {
+   "name": "page: a page URL is not given a scheme",
+   "op": "page",
+   "result": null,
+   "url": "example.com"
+  },
+  {
+   "name": "registrable: multi-label suffix",
+   "op": "registrable",
+   "result": "example.co.uk",
+   "url": "https://a.b.example.co.uk/"
+  },
+  {
+   "name": "registrable: registrable domain itself",
+   "op": "registrable",
+   "result": "example.co.uk",
+   "url": "https://example.co.uk/"
+  },
+  {
+   "name": "registrable: a host that is its known suffix",
+   "op": "registrable",
+   "result": "co.uk",
+   "url": "https://co.uk/"
+  },
+  {
+   "name": "registrable: github.io is a suffix",
+   "op": "registrable",
+   "result": "github.io",
+   "url": "https://github.io/"
+  },
+  {
+   "name": "registrable: a github.io site",
+   "op": "registrable",
+   "result": "foo.github.io",
+   "url": "https://foo.github.io/"
+  },
+  {
+   "name": "registrable: below a github.io site",
+   "op": "registrable",
+   "result": "foo.github.io",
+   "url": "https://bar.foo.github.io/"
+  },
+  {
+   "name": "registrable: no known suffix",
+   "op": "registrable",
+   "result": "nas.lan",
+   "url": "https://nas.lan/"
+  },
+  {
+   "name": "registrable: another host with no known suffix",
+   "op": "registrable",
+   "result": "printer.lan",
+   "url": "https://printer.lan/"
+  },
+  {
+   "name": "registrable: localhost",
+   "op": "registrable",
+   "result": "localhost",
+   "url": "http://localhost/"
+  },
+  {
+   "name": "registrable: IPv4 address",
+   "op": "registrable",
+   "result": "127.0.0.1",
+   "url": "https://127.0.0.1/"
+  },
+  {
+   "name": "registrable: IPv6 address",
+   "op": "registrable",
+   "result": "[::1]",
+   "url": "https://[::1]/"
+  },
+  {
+   "name": "registrable: trailing dot",
+   "op": "registrable",
+   "result": "bank.com",
+   "url": "https://www.bank.com./"
+  },
+  {
+   "name": "registrable: upper case",
+   "op": "registrable",
+   "result": "bank.com",
+   "url": "https://WWW.Bank.COM/"
+  },
+  {
+   "name": "registrable: internationalised host",
+   "op": "registrable",
+   "result": "xn--bcher-kva.de",
+   "url": "https://www.bücher.de/"
+  },
+  {
+   "name": "registrable: a suffix answer that is not trailing labels",
+   "op": "registrable",
+   "result": null,
+   "url": "https://tricky.example.com/"
+  },
+  {
+   "name": "registrable: a suffix answer with a trailing dot",
+   "op": "registrable",
+   "result": null,
+   "url": "https://dotted.example.com/"
+  },
+  {
+   "name": "registrable: an empty suffix answer",
+   "op": "registrable",
+   "result": null,
+   "url": "https://empty.example.com/"
+  },
+  {
+   "name": "registrable: an upper-case suffix answer",
+   "op": "registrable",
+   "result": null,
+   "url": "https://upper.example.com/"
+  },
+  {
+   "name": "registrable: home.arpa under the arpa suffix",
+   "op": "registrable",
+   "result": "home.arpa",
+   "url": "http://router.home.arpa/"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: same host",
+   "op": "match",
+   "page": "https://bank.com/login",
+   "result": "fill",
+   "uri": "bank.com"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: subdomain page",
+   "op": "match",
+   "page": "https://www.bank.com/",
+   "result": "fill",
+   "uri": "https://bank.com"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: ports may differ",
+   "op": "match",
+   "page": "https://bank.com:8443/",
+   "result": "fill",
+   "uri": "https://bank.com"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: http item on an https page",
+   "op": "match",
+   "page": "https://bank.com/",
+   "result": "fill",
+   "uri": "http://bank.com"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: https item on an http page with a public host",
+   "op": "match",
+   "page": "http://bank.com/",
+   "result": "none",
+   "uri": "https://bank.com"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: scheme-less item on an http page with a public host",
+   "op": "match",
+   "page": "http://bank.com/",
+   "result": "none",
+   "uri": "bank.com"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: trailing dot on the page",
+   "op": "match",
+   "page": "https://bank.com./",
+   "result": "fill",
+   "uri": "bank.com"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: upper case",
+   "op": "match",
+   "page": "https://BANK.com/",
+   "result": "fill",
+   "uri": "Bank.COM"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: internationalised item against the ASCII page",
+   "op": "match",
+   "page": "https://xn--bcher-kva.de/",
+   "result": "fill",
+   "uri": "bücher.de"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: github.io sites differ",
+   "op": "match",
+   "page": "https://foo.github.io/",
+   "result": "none",
+   "uri": "bar.github.io"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: github.io against a site",
+   "op": "match",
+   "page": "https://github.io/",
+   "result": "none",
+   "uri": "foo.github.io"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: below a github.io site",
+   "op": "match",
+   "page": "https://x.foo.github.io/",
+   "result": "fill",
+   "uri": "foo.github.io"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: co.uk subdomain",
+   "op": "match",
+   "page": "https://shop.example.co.uk/",
+   "result": "fill",
+   "uri": "example.co.uk"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: another co.uk domain",
+   "op": "match",
+   "page": "https://other.co.uk/",
+   "result": "none",
+   "uri": "example.co.uk"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: no known suffix: another host",
+   "op": "match",
+   "page": "http://printer.lan/",
+   "result": "none",
+   "uri": "http://nas.lan"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: user information in the item URI never matches, even its own host",
+   "op": "match",
+   "page": "https://evil.com/",
+   "result": "none",
+   "uri": "bank.com@evil.com"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: a mailto URI never matches its domain",
+   "op": "match",
+   "page": "https://example.com/",
+   "result": "none",
+   "uri": "mailto:someone@example.com"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: user information on the page is ignored",
+   "op": "match",
+   "page": "https://bank.com@evil.com/",
+   "result": "fill",
+   "uri": "https://evil.com"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: bad suffix answer for the page host",
+   "op": "match",
+   "page": "https://tricky.example.com/",
+   "result": "none",
+   "uri": "https://www.tricky.example.com"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: bad suffix answer for the item host",
+   "op": "match",
+   "page": "https://example.com/",
+   "result": "none",
+   "uri": "https://upper.example.com"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv4 forms",
+   "op": "match",
+   "page": "https://127.0.0.1/",
+   "result": "fill",
+   "uri": "https://0x7f.1"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv6 forms",
+   "op": "match",
+   "page": "https://[::1]/",
+   "result": "fill",
+   "uri": "https://[0:0::1]"
+  },
+  {
+   "match": "base_domain",
+   "name": "local: no known suffix",
+   "op": "match",
+   "page": "http://nas.lan/",
+   "result": "confirm",
+   "uri": "nas.lan"
+  },
+  {
+   "match": "base_domain",
+   "name": "local: localhost",
+   "op": "match",
+   "page": "http://localhost:3000/",
+   "result": "confirm",
+   "uri": "https://localhost"
+  },
+  {
+   "match": "base_domain",
+   "name": "local: home.arpa",
+   "op": "match",
+   "page": "http://router.home.arpa/",
+   "result": "confirm",
+   "uri": "https://router.home.arpa"
+  },
+  {
+   "match": "base_domain",
+   "name": "local: home.arpa itself",
+   "op": "match",
+   "page": "http://home.arpa/",
+   "result": "confirm",
+   "uri": "https://home.arpa"
+  },
+  {
+   "match": "base_domain",
+   "name": "not local: a domain ending in home.arpa without a dot",
+   "op": "match",
+   "page": "http://myhome.arpa/",
+   "result": "none",
+   "uri": "https://myhome.arpa"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: bad suffix answer: no confirm on an http page",
+   "op": "match",
+   "page": "http://tricky.example.com/",
+   "result": "none",
+   "uri": "https://tricky.example.com"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: bad suffix answer: an http item on its own host",
+   "op": "match",
+   "page": "http://tricky.example.com/",
+   "result": "none",
+   "uri": "http://tricky.example.com"
+  },
+  {
+   "match": "base_domain",
+   "name": "local: 127.0.0.0/8",
+   "op": "match",
+   "page": "http://127.1/",
+   "result": "confirm",
+   "uri": "127.0.0.1"
+  },
+  {
+   "match": "base_domain",
+   "name": "local: 10.0.0.0/8",
+   "op": "match",
+   "page": "http://10.0.0.5/",
+   "result": "confirm",
+   "uri": "10.0.0.5"
+  },
+  {
+   "match": "base_domain",
+   "name": "local: 172.16.0.0/12",
+   "op": "match",
+   "page": "http://172.31.255.1/",
+   "result": "confirm",
+   "uri": "172.31.255.1"
+  },
+  {
+   "match": "base_domain",
+   "name": "not local: 172.32.0.1",
+   "op": "match",
+   "page": "http://172.32.0.1/",
+   "result": "none",
+   "uri": "172.32.0.1"
+  },
+  {
+   "match": "base_domain",
+   "name": "local: 192.168.0.0/16",
+   "op": "match",
+   "page": "http://192.168.1.1/",
+   "result": "confirm",
+   "uri": "192.168.1.1"
+  },
+  {
+   "match": "base_domain",
+   "name": "local: 169.254.0.0/16",
+   "op": "match",
+   "page": "http://169.254.1.1/",
+   "result": "confirm",
+   "uri": "169.254.1.1"
+  },
+  {
+   "match": "base_domain",
+   "name": "not local: a public IPv4 address",
+   "op": "match",
+   "page": "http://8.8.8.8/",
+   "result": "none",
+   "uri": "8.8.8.8"
+  },
+  {
+   "match": "base_domain",
+   "name": "local: ::1",
+   "op": "match",
+   "page": "http://[::1]/",
+   "result": "confirm",
+   "uri": "https://[::1]"
+  },
+  {
+   "match": "base_domain",
+   "name": "local: fc00::/7",
+   "op": "match",
+   "page": "http://[fd00::1]/",
+   "result": "confirm",
+   "uri": "https://[fd00::1]"
+  },
+  {
+   "match": "base_domain",
+   "name": "local: fe80::/10",
+   "op": "match",
+   "page": "http://[fe80::1]/",
+   "result": "confirm",
+   "uri": "https://[fe80::1]"
+  },
+  {
+   "match": "base_domain",
+   "name": "not local: a public IPv6 address",
+   "op": "match",
+   "page": "http://[2001:db8::1]/",
+   "result": "none",
+   "uri": "https://[2001:db8::1]"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: http item on an http local page",
+   "op": "match",
+   "page": "http://nas.lan/",
+   "result": "fill",
+   "uri": "http://nas.lan"
+  },
+  {
+   "match": "host",
+   "name": "host: explicit default port",
+   "op": "match",
+   "page": "https://bank.com/",
+   "result": "fill",
+   "uri": "https://bank.com:443"
+  },
+  {
+   "match": "host",
+   "name": "host: port differs",
+   "op": "match",
+   "page": "https://bank.com:8443/",
+   "result": "none",
+   "uri": "https://bank.com"
+  },
+  {
+   "match": "host",
+   "name": "host: subdomain",
+   "op": "match",
+   "page": "https://www.bank.com/",
+   "result": "none",
+   "uri": "bank.com"
+  },
+  {
+   "match": "host",
+   "name": "host: http default port",
+   "op": "match",
+   "page": "http://bank.com/",
+   "result": "fill",
+   "uri": "http://bank.com:80"
+  },
+  {
+   "match": "host",
+   "name": "host: 443 on an http page is not a default port",
+   "op": "match",
+   "page": "http://bank.com:443/",
+   "result": "none",
+   "uri": "https://bank.com"
+  },
+  {
+   "match": "host",
+   "name": "host: http item on an https page",
+   "op": "match",
+   "page": "https://bank.com/",
+   "result": "fill",
+   "uri": "http://bank.com"
+  },
+  {
+   "match": "host",
+   "name": "host: https item on an http public page",
+   "op": "match",
+   "page": "http://bank.com/",
+   "result": "none",
+   "uri": "https://bank.com"
+  },
+  {
+   "match": "host",
+   "name": "host: local host with a port",
+   "op": "match",
+   "page": "http://nas.lan:8443/",
+   "result": "confirm",
+   "uri": "nas.lan:8443"
+  },
+  {
+   "match": "host",
+   "name": "host: trailing dot",
+   "op": "match",
+   "page": "https://bank.com./",
+   "result": "fill",
+   "uri": "https://bank.com"
+  },
+  {
+   "match": "host",
+   "name": "host: bad suffix answer on an equal host",
+   "op": "match",
+   "page": "https://dotted.example.com/",
+   "result": "none",
+   "uri": "https://dotted.example.com"
+  },
+  {
+   "match": "starts_with",
+   "name": "starts_with: a longer path",
+   "op": "match",
+   "page": "https://bank.com/accounts/view?id=1",
+   "result": "fill",
+   "uri": "https://bank.com/accounts"
+  },
+  {
+   "match": "starts_with",
+   "name": "starts_with: a shorter path",
+   "op": "match",
+   "page": "https://bank.com/acc",
+   "result": "none",
+   "uri": "https://bank.com/accounts"
+  },
+  {
+   "match": "starts_with",
+   "name": "starts_with: a string prefix, not a path segment",
+   "op": "match",
+   "page": "https://bank.com/accountsXYZ",
+   "result": "fill",
+   "uri": "https://bank.com/accounts"
+  },
+  {
+   "match": "starts_with",
+   "name": "starts_with: scheme differs",
+   "op": "match",
+   "page": "http://bank.com/accounts",
+   "result": "none",
+   "uri": "https://bank.com/accounts"
+  },
+  {
+   "match": "starts_with",
+   "name": "starts_with: http item on an https page",
+   "op": "match",
+   "page": "https://bank.com/accounts",
+   "result": "none",
+   "uri": "http://bank.com/accounts"
+  },
+  {
+   "match": "starts_with",
+   "name": "starts_with: port differs",
+   "op": "match",
+   "page": "https://bank.com:8443/accounts",
+   "result": "none",
+   "uri": "https://bank.com/accounts"
+  },
+  {
+   "match": "starts_with",
+   "name": "starts_with: empty query prefix",
+   "op": "match",
+   "page": "https://bank.com/x?q=1",
+   "result": "fill",
+   "uri": "https://bank.com/x?"
+  },
+  {
+   "match": "starts_with",
+   "name": "starts_with: root path",
+   "op": "match",
+   "page": "https://bank.com/anything",
+   "result": "fill",
+   "uri": "bank.com"
+  },
+  {
+   "match": "starts_with",
+   "name": "starts_with: subdomain",
+   "op": "match",
+   "page": "https://www.bank.com/accounts",
+   "result": "none",
+   "uri": "bank.com/accounts"
+  },
+  {
+   "match": "exact",
+   "name": "exact: fragment ignored on both sides",
+   "op": "match",
+   "page": "https://bank.com/login?next=1#top",
+   "result": "fill",
+   "uri": "https://bank.com/login?next=1#x"
+  },
+  {
+   "match": "exact",
+   "name": "exact: query missing on the page",
+   "op": "match",
+   "page": "https://bank.com/login",
+   "result": "none",
+   "uri": "https://bank.com/login?next=1"
+  },
+  {
+   "match": "exact",
+   "name": "exact: an empty query is not no query",
+   "op": "match",
+   "page": "https://bank.com/login?#x",
+   "result": "none",
+   "uri": "https://bank.com/login"
+  },
+  {
+   "match": "exact",
+   "name": "exact: path case",
+   "op": "match",
+   "page": "https://bank.com/Login",
+   "result": "none",
+   "uri": "https://bank.com/login"
+  },
+  {
+   "match": "exact",
+   "name": "exact: default port written out",
+   "op": "match",
+   "page": "https://bank.com/login",
+   "result": "fill",
+   "uri": "https://bank.com:443/login"
+  },
+  {
+   "match": "exact",
+   "name": "exact: bad suffix answer on an equal URL",
+   "op": "match",
+   "page": "https://empty.example.com/a",
+   "result": "none",
+   "uri": "https://empty.example.com/a"
+  },
+  {
+   "match": "never",
+   "name": "never",
+   "op": "match",
+   "page": "https://bank.com/",
+   "result": "none",
+   "uri": "bank.com"
+  },
+  {
+   "match": "regex",
+   "name": "unknown match value",
+   "op": "match",
+   "page": "https://bank.com/",
+   "result": "none",
+   "uri": "bank.com"
+  },
+  {
+   "match": "base_domain",
+   "name": "androidapp URI",
+   "op": "match",
+   "page": "https://bank.com/",
+   "result": "none",
+   "uri": "androidapp://com.bank"
+  },
+  {
+   "match": "base_domain",
+   "name": "unparseable URI",
+   "op": "match",
+   "page": "https://bank.com/",
+   "result": "none",
+   "uri": "https://exa mple.com"
+  },
+  {
+   "match": "base_domain",
+   "name": "suffix lookalike page, base_domain",
+   "op": "match",
+   "page": "https://bank.com.evil.com/",
+   "result": "none",
+   "uri": "https://bank.com/"
+  },
+  {
+   "match": "base_domain",
+   "name": "user information lookalike page, base_domain",
+   "op": "match",
+   "page": "https://bank.com@evil.com/",
+   "result": "none",
+   "uri": "https://bank.com/"
+  },
+  {
+   "match": "host",
+   "name": "suffix lookalike page, host",
+   "op": "match",
+   "page": "https://bank.com.evil.com/",
+   "result": "none",
+   "uri": "https://bank.com/"
+  },
+  {
+   "match": "host",
+   "name": "user information lookalike page, host",
+   "op": "match",
+   "page": "https://bank.com@evil.com/",
+   "result": "none",
+   "uri": "https://bank.com/"
+  },
+  {
+   "match": "starts_with",
+   "name": "suffix lookalike page, starts_with",
+   "op": "match",
+   "page": "https://bank.com.evil.com/",
+   "result": "none",
+   "uri": "https://bank.com/"
+  },
+  {
+   "match": "starts_with",
+   "name": "user information lookalike page, starts_with",
+   "op": "match",
+   "page": "https://bank.com@evil.com/",
+   "result": "none",
+   "uri": "https://bank.com/"
+  },
+  {
+   "match": "exact",
+   "name": "suffix lookalike page, exact",
+   "op": "match",
+   "page": "https://bank.com.evil.com/",
+   "result": "none",
+   "uri": "https://bank.com/"
+  },
+  {
+   "match": "exact",
+   "name": "user information lookalike page, exact",
+   "op": "match",
+   "page": "https://bank.com@evil.com/",
+   "result": "none",
+   "uri": "https://bank.com/"
+  },
+  {
+   "match": "never",
+   "name": "suffix lookalike page, never",
+   "op": "match",
+   "page": "https://bank.com.evil.com/",
+   "result": "none",
+   "uri": "https://bank.com/"
+  },
+  {
+   "match": "never",
+   "name": "user information lookalike page, never",
+   "op": "match",
+   "page": "https://bank.com@evil.com/",
+   "result": "none",
+   "uri": "https://bank.com/"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: cross-site: evilbank.com, base_domain",
+   "op": "match",
+   "page": "https://bank.com/",
+   "result": "none",
+   "uri": "evilbank.com"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: cross-site: bank.net, base_domain",
+   "op": "match",
+   "page": "https://bank.com/",
+   "result": "none",
+   "uri": "bank.net"
+  },
+  {
+   "match": "host",
+   "name": "base_domain: cross-site: evilbank.com, host",
+   "op": "match",
+   "page": "https://bank.com/",
+   "result": "none",
+   "uri": "evilbank.com"
+  },
+  {
+   "match": "host",
+   "name": "base_domain: cross-site: bank.net, host",
+   "op": "match",
+   "page": "https://bank.com/",
+   "result": "none",
+   "uri": "bank.net"
+  },
+  {
+   "name": "prepare: a backslash ends the host",
+   "op": "prepare",
+   "result": {
+    "host": "evil.com",
+    "origin": "https://evil.com",
+    "path_query": "/@bank.com/",
+    "port": null,
+    "scheme": "https"
+   },
+   "uri": "https://evil.com\\@bank.com/"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: cross-site: backslash before @",
+   "op": "match",
+   "page": "https://bank.com/",
+   "result": "none",
+   "uri": "https://evil.com\\@bank.com/"
+  },
+  {
+   "name": "prepare: a percent-encoded dot in the host",
+   "op": "prepare",
+   "result": {
+    "host": "bank.com.evil.com",
+    "origin": "https://bank.com.evil.com",
+    "path_query": "/",
+    "port": null,
+    "scheme": "https"
+   },
+   "uri": "bank.com%2eevil.com"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: cross-site: percent-encoded dot",
+   "op": "match",
+   "page": "https://bank.com/",
+   "result": "none",
+   "uri": "bank.com%2eevil.com"
+  },
+  {
+   "name": "prepare: a tab inside the host is removed by parsing",
+   "op": "prepare",
+   "result": {
+    "host": "bank.com",
+    "origin": "https://bank.com",
+    "path_query": "/",
+    "port": null,
+    "scheme": "https"
+   },
+   "uri": "https://ba\tnk.com/"
+  },
+  {
+   "name": "prepare: a newline inside the host is removed by parsing",
+   "op": "prepare",
+   "result": {
+    "host": "bank.com",
+    "origin": "https://bank.com",
+    "path_query": "/",
+    "port": null,
+    "scheme": "https"
+   },
+   "uri": "https://bank\n.com/"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: a tab inside the item host",
+   "op": "match",
+   "page": "https://bank.com/",
+   "result": "fill",
+   "uri": "https://ba\tnk.com/"
+  },
+  {
+   "name": "prepare: an ideographic full stop",
+   "op": "prepare",
+   "result": {
+    "host": "bank.com",
+    "origin": "https://bank.com",
+    "path_query": "/",
+    "port": null,
+    "scheme": "https"
+   },
+   "uri": "bank。com"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: an ideographic full stop is a dot",
+   "op": "match",
+   "page": "https://bank.com/",
+   "result": "fill",
+   "uri": "bank。com"
+  },
+  {
+   "name": "prepare: a Cyrillic homograph",
+   "op": "prepare",
+   "result": {
+    "host": "xn--bnk-6cd.com",
+    "origin": "https://xn--bnk-6cd.com",
+    "path_query": "/",
+    "port": null,
+    "scheme": "https"
+   },
+   "uri": "bаnk.com"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: cross-site: Cyrillic homograph",
+   "op": "match",
+   "page": "https://bank.com/",
+   "result": "none",
+   "uri": "bаnk.com"
+  },
+  {
+   "name": "prepare: sharp s is kept",
+   "op": "prepare",
+   "result": {
+    "host": "xn--fa-hia.de",
+    "origin": "https://xn--fa-hia.de",
+    "path_query": "/",
+    "port": null,
+    "scheme": "https"
+   },
+   "uri": "faß.de"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: sharp s is not ss",
+   "op": "match",
+   "page": "https://fass.de/",
+   "result": "none",
+   "uri": "faß.de"
+  },
+  {
+   "name": "prepare: a scheme-like text inside the query is not a scheme",
+   "op": "prepare",
+   "result": {
+    "host": "good.com",
+    "origin": "https://good.com",
+    "path_query": "/x?u=http://evil.com",
+    "port": null,
+    "scheme": "https"
+   },
+   "uri": "good.com/x?u=http://evil.com"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: prefix rule: the item is good.com",
+   "op": "match",
+   "page": "https://good.com/",
+   "result": "fill",
+   "uri": "good.com/x?u=http://evil.com"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: prefix rule: not evil.com",
+   "op": "match",
+   "page": "https://evil.com/",
+   "result": "none",
+   "uri": "good.com/x?u=http://evil.com"
+  },
+  {
+   "name": "prepare: a scheme must start with a letter",
+   "op": "prepare",
+   "result": {
+    "host": "1x",
+    "origin": "https://1x",
+    "path_query": "//bank.com",
+    "port": null,
+    "scheme": "https"
+   },
+   "uri": "1x://bank.com"
+  },
+  {
+   "name": "prepare: an upper-case scheme",
+   "op": "prepare",
+   "result": {
+    "host": "bank.com",
+    "origin": "http://bank.com",
+    "path_query": "/",
+    "port": null,
+    "scheme": "http"
+   },
+   "uri": "HTTP://bank.com"
+  },
+  {
+   "name": "prepare: a scheme with + is not http",
+   "op": "prepare",
+   "result": null,
+   "uri": "git+ssh://bank.com"
+  },
+  {
+   "name": "prepare: empty label inside",
+   "op": "prepare",
+   "result": null,
+   "uri": "https://a..b/"
+  },
+  {
+   "name": "prepare: two trailing dots",
+   "op": "prepare",
+   "result": null,
+   "uri": "example.com.."
+  },
+  {
+   "name": "prepare: leading dot",
+   "op": "prepare",
+   "result": null,
+   "uri": "https://.co.uk/"
+  },
+  {
+   "name": "prepare: only a dot",
+   "op": "prepare",
+   "result": null,
+   "uri": "https://./"
+  },
+  {
+   "name": "page: two trailing dots",
+   "op": "page",
+   "result": null,
+   "url": "https://example.com../"
+  },
+  {
+   "name": "page: one trailing dot",
+   "op": "page",
+   "result": {
+    "host": "bank.com",
+    "origin": "https://bank.com",
+    "path_query": "/",
+    "port": null,
+    "scheme": "https"
+   },
+   "url": "https://bank.com./"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: empty label: a page never matches",
+   "op": "match",
+   "page": "https://bank.com../",
+   "result": "none",
+   "uri": "bank.com"
+  },
+  {
+   "name": "prepare: form feed and carriage return are trimmed",
+   "op": "prepare",
+   "result": {
+    "host": "bank.com",
+    "origin": "https://bank.com",
+    "path_query": "/",
+    "port": null,
+    "scheme": "https"
+   },
+   "uri": "\fbank.com\r"
+  },
+  {
+   "name": "prepare: vertical tab is not trimmed",
+   "op": "prepare",
+   "result": null,
+   "uri": "\u000bbank.com"
+  },
+  {
+   "name": "prepare: no-break space is not trimmed",
+   "op": "prepare",
+   "result": null,
+   "uri": " bank.com"
+  },
+  {
+   "name": "prepare: port 0",
+   "op": "prepare",
+   "result": {
+    "host": "bank.com",
+    "origin": "https://bank.com:0",
+    "path_query": "/",
+    "port": 0,
+    "scheme": "https"
+   },
+   "uri": "https://bank.com:0"
+  },
+  {
+   "name": "prepare: port out of range",
+   "op": "prepare",
+   "result": null,
+   "uri": "https://bank.com:99999"
+  },
+  {
+   "name": "page: port out of range",
+   "op": "page",
+   "result": null,
+   "url": "https://bank.com:99999/"
+  },
+  {
+   "match": "host",
+   "name": "host: port 0 on both",
+   "op": "match",
+   "page": "https://bank.com:0/",
+   "result": "fill",
+   "uri": "https://bank.com:0"
+  },
+  {
+   "match": "host",
+   "name": "host: port 0 against the default",
+   "op": "match",
+   "page": "https://bank.com/",
+   "result": "none",
+   "uri": "https://bank.com:0"
+  },
+  {
+   "match": "base_domain",
+   "name": "local: octal 127",
+   "op": "match",
+   "page": "http://0177.0.0.1/",
+   "result": "confirm",
+   "uri": "https://127.0.0.1"
+  },
+  {
+   "match": "base_domain",
+   "name": "local: decimal 127.0.0.1",
+   "op": "match",
+   "page": "http://2130706433/",
+   "result": "confirm",
+   "uri": "https://127.0.0.1"
+  },
+  {
+   "match": "base_domain",
+   "name": "local: IPv4 with a trailing dot",
+   "op": "match",
+   "page": "http://127.0.0.1./",
+   "result": "confirm",
+   "uri": "https://127.0.0.1"
+  },
+  {
+   "match": "base_domain",
+   "name": "not local: 010.0.0.1 is 8.0.0.1",
+   "op": "match",
+   "page": "http://010.0.0.1/",
+   "result": "none",
+   "uri": "https://8.0.0.1"
+  },
+  {
+   "name": "prepare: IPv4-mapped IPv6 serialisation",
+   "op": "prepare",
+   "result": {
+    "host": "[::ffff:7f00:1]",
+    "origin": "https://[::ffff:7f00:1]",
+    "path_query": "/",
+    "port": null,
+    "scheme": "https"
+   },
+   "uri": "https://[::ffff:127.0.0.1]/"
+  },
+  {
+   "match": "base_domain",
+   "name": "not local: IPv4-mapped IPv6",
+   "op": "match",
+   "page": "http://[::ffff:127.0.0.1]/",
+   "result": "none",
+   "uri": "https://[::ffff:127.0.0.1]"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv4 edge 9.255.255.255",
+   "op": "match",
+   "page": "http://9.255.255.255/",
+   "result": "none",
+   "uri": "https://9.255.255.255"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv4 edge 10.0.0.0",
+   "op": "match",
+   "page": "http://10.0.0.0/",
+   "result": "confirm",
+   "uri": "https://10.0.0.0"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv4 edge 10.255.255.255",
+   "op": "match",
+   "page": "http://10.255.255.255/",
+   "result": "confirm",
+   "uri": "https://10.255.255.255"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv4 edge 11.0.0.0",
+   "op": "match",
+   "page": "http://11.0.0.0/",
+   "result": "none",
+   "uri": "https://11.0.0.0"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv4 edge 126.255.255.255",
+   "op": "match",
+   "page": "http://126.255.255.255/",
+   "result": "none",
+   "uri": "https://126.255.255.255"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv4 edge 127.0.0.0",
+   "op": "match",
+   "page": "http://127.0.0.0/",
+   "result": "confirm",
+   "uri": "https://127.0.0.0"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv4 edge 127.255.255.255",
+   "op": "match",
+   "page": "http://127.255.255.255/",
+   "result": "confirm",
+   "uri": "https://127.255.255.255"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv4 edge 128.0.0.0",
+   "op": "match",
+   "page": "http://128.0.0.0/",
+   "result": "none",
+   "uri": "https://128.0.0.0"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv4 edge 172.15.255.255",
+   "op": "match",
+   "page": "http://172.15.255.255/",
+   "result": "none",
+   "uri": "https://172.15.255.255"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv4 edge 172.16.0.0",
+   "op": "match",
+   "page": "http://172.16.0.0/",
+   "result": "confirm",
+   "uri": "https://172.16.0.0"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv4 edge 172.31.255.255",
+   "op": "match",
+   "page": "http://172.31.255.255/",
+   "result": "confirm",
+   "uri": "https://172.31.255.255"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv4 edge 172.32.0.0",
+   "op": "match",
+   "page": "http://172.32.0.0/",
+   "result": "none",
+   "uri": "https://172.32.0.0"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv4 edge 169.253.255.255",
+   "op": "match",
+   "page": "http://169.253.255.255/",
+   "result": "none",
+   "uri": "https://169.253.255.255"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv4 edge 169.254.0.0",
+   "op": "match",
+   "page": "http://169.254.0.0/",
+   "result": "confirm",
+   "uri": "https://169.254.0.0"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv4 edge 169.254.255.255",
+   "op": "match",
+   "page": "http://169.254.255.255/",
+   "result": "confirm",
+   "uri": "https://169.254.255.255"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv4 edge 169.255.0.0",
+   "op": "match",
+   "page": "http://169.255.0.0/",
+   "result": "none",
+   "uri": "https://169.255.0.0"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv4 edge 192.167.255.255",
+   "op": "match",
+   "page": "http://192.167.255.255/",
+   "result": "none",
+   "uri": "https://192.167.255.255"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv4 edge 192.168.0.0",
+   "op": "match",
+   "page": "http://192.168.0.0/",
+   "result": "confirm",
+   "uri": "https://192.168.0.0"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv4 edge 192.168.255.255",
+   "op": "match",
+   "page": "http://192.168.255.255/",
+   "result": "confirm",
+   "uri": "https://192.168.255.255"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv4 edge 192.169.0.0",
+   "op": "match",
+   "page": "http://192.169.0.0/",
+   "result": "none",
+   "uri": "https://192.169.0.0"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv6 edge fbff::1",
+   "op": "match",
+   "page": "http://[fbff::1]/",
+   "result": "none",
+   "uri": "https://[fbff::1]"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv6 edge fc00::",
+   "op": "match",
+   "page": "http://[fc00::]/",
+   "result": "confirm",
+   "uri": "https://[fc00::]"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv6 edge fdff::1",
+   "op": "match",
+   "page": "http://[fdff::1]/",
+   "result": "confirm",
+   "uri": "https://[fdff::1]"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv6 edge fe00::1",
+   "op": "match",
+   "page": "http://[fe00::1]/",
+   "result": "none",
+   "uri": "https://[fe00::1]"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv6 edge fe7f::1",
+   "op": "match",
+   "page": "http://[fe7f::1]/",
+   "result": "none",
+   "uri": "https://[fe7f::1]"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv6 edge fe80::",
+   "op": "match",
+   "page": "http://[fe80::]/",
+   "result": "confirm",
+   "uri": "https://[fe80::]"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv6 edge febf::1",
+   "op": "match",
+   "page": "http://[febf::1]/",
+   "result": "confirm",
+   "uri": "https://[febf::1]"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv6 edge fec0::1",
+   "op": "match",
+   "page": "http://[fec0::1]/",
+   "result": "none",
+   "uri": "https://[fec0::1]"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: IPv6 edge ::2",
+   "op": "match",
+   "page": "http://[::2]/",
+   "result": "none",
+   "uri": "https://[::2]"
+  },
+  {
+   "match": "starts_with",
+   "name": "starts_with: local host, scheme differs",
+   "op": "match",
+   "page": "http://nas.lan/a",
+   "result": "none",
+   "uri": "https://nas.lan/a"
+  },
+  {
+   "match": "exact",
+   "name": "exact: local host, scheme differs",
+   "op": "match",
+   "page": "http://nas.lan/a",
+   "result": "none",
+   "uri": "https://nas.lan/a"
+  },
+  {
+   "match": "starts_with",
+   "name": "starts_with: bad suffix answer",
+   "op": "match",
+   "page": "https://tricky.example.com/a/b",
+   "result": "none",
+   "uri": "https://tricky.example.com/a"
+  },
+  {
+   "name": "registrable: a suffix answer longer than the host",
+   "op": "registrable",
+   "result": null,
+   "url": "https://short.com/"
+  },
+  {
+   "name": "registrable: a suffix answer with a leading dot",
+   "op": "registrable",
+   "result": null,
+   "url": "https://lead.example.com/"
+  },
+  {
+   "match": "host",
+   "name": "base_domain: a suffix answer longer than the host never matches",
+   "op": "match",
+   "page": "https://short.com/",
+   "result": "none",
+   "uri": "https://short.com"
+  },
+  {
+   "name": "registrable: a punycode suffix",
+   "op": "registrable",
+   "result": "b.xn--p1ai",
+   "url": "https://a.b.xn--p1ai/"
+  },
+  {
+   "name": "registrable: an internationalised name under a punycode suffix",
+   "op": "registrable",
+   "result": "xn--e1afmkfd.xn--p1ai",
+   "url": "https://www.пример.рф/"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: base_domain under a punycode suffix",
+   "op": "match",
+   "page": "https://www.xn--e1afmkfd.xn--p1ai/",
+   "result": "fill",
+   "uri": "пример.рф"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: another name under a punycode suffix",
+   "op": "match",
+   "page": "https://other.xn--p1ai/",
+   "result": "none",
+   "uri": "пример.рф"
+  },
+  {
+   "items": [
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Zeta",
+     "password": "p",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "u"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Alpha",
+     "password": "p",
+     "type": "login",
+     "uris": [
+      {
+       "match": "exact",
+       "uri": "https://bank.com/other"
+      }
+     ],
+     "username": "u"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Alpha",
+     "password": "p",
+     "type": "login",
+     "uris": [
+      {
+       "match": "host",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "u"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000004",
+     "name": "alpha",
+     "password": "p",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "u"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000005",
+     "name": "Beta",
+     "password": "p",
+     "type": "login",
+     "uris": [],
+     "username": "u"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000006",
+     "name": "Bank note",
+     "type": "note"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000007",
+     "name": "Alpha",
+     "password": "p",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "u"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000008",
+     "name": "Both",
+     "password": "p",
+     "type": "login",
+     "uris": [
+      {
+       "match": "never",
+       "uri": "bank.com"
+      },
+      {
+       "match": "base_domain",
+       "uri": "https://www.bank.com"
+      }
+     ],
+     "username": "u"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000009",
+     "name": "Unknown mode",
+     "password": "p",
+     "type": "login",
+     "uris": [
+      {
+       "match": "regex",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "u"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000010",
+     "name": "User info",
+     "password": "p",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "https://bank.com@bank.com"
+      }
+     ],
+     "username": "u"
+    }
+   ],
+   "name": "candidate order: fill, then name by code point, then id",
+   "op": "items",
+   "page": "https://bank.com/login",
+   "result": [
+    {
+     "id": "00000000-0000-4000-8000-000000000003",
+     "outcome": "fill"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000007",
+     "outcome": "fill"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000008",
+     "outcome": "fill"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "outcome": "fill"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000004",
+     "outcome": "fill"
+    }
+   ]
+  },
+  {
+   "items": [
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "A NAS",
+     "password": "p",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "nas.lan"
+      }
+     ],
+     "username": "u"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Z NAS",
+     "password": "p",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "http://nas.lan"
+      }
+     ],
+     "username": "u"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Printer",
+     "password": "p",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "printer.lan"
+      }
+     ],
+     "username": "u"
+    }
+   ],
+   "name": "candidate order: fill before confirm",
+   "op": "items",
+   "page": "http://nas.lan/",
+   "result": [
+    {
+     "id": "00000000-0000-4000-8000-000000000002",
+     "outcome": "fill"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "outcome": "confirm"
+    }
+   ]
+  },
+  {
+   "items": [
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Any",
+     "password": "p",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "u"
+    }
+   ],
+   "name": "no candidates on a page that is not a page URL",
+   "op": "items",
+   "page": "about:blank",
+   "result": []
+  },
+  {
+   "frames": [
+    {
+     "id": 0,
+     "url": "https://bank.com/login"
+    },
+    {
+     "id": 1,
+     "url": "https://bank.com/widget?x=1"
+    },
+    {
+     "id": 2,
+     "url": "https://cdn.bank.com/frame"
+    },
+    {
+     "id": 3,
+     "url": "https://evil.com/"
+    },
+    {
+     "id": 4,
+     "url": "about:blank"
+    },
+    {
+     "id": 5,
+     "url": "http://bank.com/"
+    },
+    {
+     "id": 6,
+     "url": "https://bank.com:8443/"
+    },
+    {
+     "id": 7,
+     "url": "moz-extension://abc/frame.html"
+    },
+    {
+     "id": 8,
+     "url": "data:text/html,hi"
+    }
+   ],
+   "name": "frames: the top frame and same-origin frames only",
+   "op": "frames",
+   "result": [
+    0,
+    1
+   ],
+   "top": "https://bank.com/login"
+  },
+  {
+   "frames": [
+    {
+     "id": 0,
+     "url": "about:blank"
+    },
+    {
+     "id": 1,
+     "url": "https://bank.com/"
+    }
+   ],
+   "name": "frames: a top frame that is not a page URL fills nothing",
+   "op": "frames",
+   "result": [],
+   "top": "about:blank"
+  },
+  {
+   "items": [
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bank",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Bank 2",
+     "password": "p2",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Other site",
+     "password": "p9",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "other.com"
+      }
+     ],
+     "username": "alice"
+    }
+   ],
+   "name": "save: username and password already stored",
+   "op": "save",
+   "page": "https://bank.com/login",
+   "password": "p2",
+   "result": {
+    "action": "none"
+   },
+   "username": "ned"
+  },
+  {
+   "items": [
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bank",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Bank 2",
+     "password": "p2",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Other site",
+     "password": "p9",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "other.com"
+      }
+     ],
+     "username": "alice"
+    }
+   ],
+   "name": "save: a new password updates the first candidate",
+   "op": "save",
+   "page": "https://bank.com/login",
+   "password": "p3",
+   "result": {
+    "action": "update",
+    "id": "00000000-0000-4000-8000-000000000001"
+   },
+   "username": "ned"
+  },
+  {
+   "items": [
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bank",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Bank 2",
+     "password": "p2",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Other site",
+     "password": "p9",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "other.com"
+      }
+     ],
+     "username": "alice"
+    }
+   ],
+   "name": "save: a new username",
+   "op": "save",
+   "page": "https://bank.com/login",
+   "password": "p1",
+   "result": {
+    "action": "new",
+    "match": "base_domain",
+    "name": "bank.com",
+    "uri": "https://bank.com"
+   },
+   "username": "alice"
+  },
+  {
+   "items": [
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bank",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Bank 2",
+     "password": "p2",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Other site",
+     "password": "p9",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "other.com"
+      }
+     ],
+     "username": "alice"
+    }
+   ],
+   "name": "save: usernames compare exactly",
+   "op": "save",
+   "page": "https://bank.com/login",
+   "password": "p1",
+   "result": {
+    "action": "new",
+    "match": "base_domain",
+    "name": "bank.com",
+    "uri": "https://bank.com"
+   },
+   "username": "Ned"
+  },
+  {
+   "items": [],
+   "name": "save: the origin keeps a port and drops the path, query, and fragment",
+   "op": "save",
+   "page": "https://www.bank.com:8443/signin?x=1#y",
+   "password": "pw",
+   "result": {
+    "action": "new",
+    "match": "base_domain",
+    "name": "www.bank.com",
+    "uri": "https://www.bank.com:8443"
+   },
+   "username": "alice"
+  },
+  {
+   "items": [
+    {
+     "id": "00000000-0000-4000-8000-000000000004",
+     "name": "NAS",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "nas.lan"
+      }
+     ],
+     "username": "ned"
+    }
+   ],
+   "name": "save: an item that only confirms is not considered",
+   "op": "save",
+   "page": "http://nas.lan/",
+   "password": "p1",
+   "result": {
+    "action": "new",
+    "match": "base_domain",
+    "name": "nas.lan",
+    "uri": "http://nas.lan"
+   },
+   "username": "ned"
+  },
+  {
+   "items": [
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bank",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Bank 2",
+     "password": "p2",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Other site",
+     "password": "p9",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "other.com"
+      }
+     ],
+     "username": "alice"
+    }
+   ],
+   "name": "save: an empty password offers nothing",
+   "op": "save",
+   "page": "https://bank.com/login",
+   "password": "",
+   "result": {
+    "action": "none"
+   },
+   "username": "ned"
+  },
+  {
+   "items": [
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bank",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Bank 2",
+     "password": "p2",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Other site",
+     "password": "p9",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "other.com"
+      }
+     ],
+     "username": "alice"
+    }
+   ],
+   "name": "save: not a page URL",
+   "op": "save",
+   "page": "about:blank",
+   "password": "p3",
+   "result": {
+    "action": "none"
+   },
+   "username": "ned"
+  },
+  {
+   "items": [],
+   "name": "save: trailing dot left out of the name and URI",
+   "op": "save",
+   "page": "https://bank.com./",
+   "password": "pw",
+   "result": {
+    "action": "new",
+    "match": "base_domain",
+    "name": "bank.com",
+    "uri": "https://bank.com"
+   },
+   "username": "alice"
+  },
+  {
+   "items": [
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Charlie",
+     "password": "c",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Bob",
+     "password": "b",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Alice",
+     "password": "a",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    }
+   ],
+   "name": "candidate order differs from input and id order",
+   "op": "items",
+   "page": "https://bank.com/",
+   "result": [
+    {
+     "id": "00000000-0000-4000-8000-000000000002",
+     "outcome": "fill"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000003",
+     "outcome": "fill"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "outcome": "fill"
+    }
+   ]
+  },
+  {
+   "items": [
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Charlie",
+     "password": "c",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Bob",
+     "password": "b",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Alice",
+     "password": "a",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    }
+   ],
+   "name": "save: update goes to the first in candidate order, not input or id order",
+   "op": "save",
+   "page": "https://bank.com/",
+   "password": "new",
+   "result": {
+    "action": "update",
+    "id": "00000000-0000-4000-8000-000000000002"
+   },
+   "username": "ned"
+  },
+  {
+   "items": [
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "😀",
+     "password": "p",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "u"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "～",
+     "password": "p",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "u"
+    }
+   ],
+   "name": "names compare by code point, not UTF-16",
+   "op": "items",
+   "page": "https://bank.com/",
+   "result": [
+    {
+     "id": "00000000-0000-4000-8000-000000000002",
+     "outcome": "fill"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "outcome": "fill"
+    }
+   ]
+  },
+  {
+   "items": [
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "NAS",
+     "password": "p",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "nas.lan"
+      },
+      {
+       "match": "host",
+       "uri": "http://nas.lan"
+      }
+     ],
+     "username": "u"
+    }
+   ],
+   "name": "an item with a confirm URI and a fill URI fills",
+   "op": "items",
+   "page": "http://nas.lan/",
+   "result": [
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "outcome": "fill"
+    }
+   ]
+  },
+  {
+   "items": [
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bank",
+     "password": "p",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "https://exa mple.com"
+      },
+      {
+       "match": "base_domain",
+       "uri": "androidapp://com.bank"
+      },
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "u"
+    }
+   ],
+   "name": "a bad URI next to a good one",
+   "op": "items",
+   "page": "https://bank.com/",
+   "result": [
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "outcome": "fill"
+    }
+   ]
+  },
+  {
+   "items": [
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bank",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Bank 2",
+     "password": "p2",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Other site",
+     "password": "p9",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "other.com"
+      }
+     ],
+     "username": "alice"
+    }
+   ],
+   "name": "save: the matching password comes first",
+   "op": "save",
+   "page": "https://bank.com/login",
+   "password": "p1",
+   "result": {
+    "action": "none"
+   },
+   "username": "ned"
+  },
+  {
+   "items": [],
+   "name": "save: an internationalised page",
+   "op": "save",
+   "page": "https://bücher.de/login",
+   "password": "pw",
+   "result": {
+    "action": "new",
+    "match": "base_domain",
+    "name": "xn--bcher-kva.de",
+    "uri": "https://xn--bcher-kva.de"
+   },
+   "username": "ned"
+  },
+  {
+   "items": [],
+   "name": "save: an IPv4 page",
+   "op": "save",
+   "page": "http://192.168.1.1:8080/admin",
+   "password": "pw",
+   "result": {
+    "action": "new",
+    "match": "base_domain",
+    "name": "192.168.1.1",
+    "uri": "http://192.168.1.1:8080"
+   },
+   "username": "admin"
+  },
+  {
+   "items": [],
+   "name": "save: an IPv6 page",
+   "op": "save",
+   "page": "https://[::ffff:127.0.0.1]/",
+   "password": "pw",
+   "result": {
+    "action": "new",
+    "match": "base_domain",
+    "name": "[::ffff:7f00:1]",
+    "uri": "https://[::ffff:7f00:1]"
+   },
+   "username": "admin"
+  },
+  {
+   "items": [],
+   "name": "save: a page with an empty label",
+   "op": "save",
+   "page": "https://a..bank.com/",
+   "password": "pw",
+   "result": {
+    "action": "none"
+   },
+   "username": "ned"
+  },
+  {
+   "frames": [
+    {
+     "id": 1,
+     "url": "https://user:pw@bank.com/frame"
+    },
+    {
+     "id": 2,
+     "url": "blob:https://bank.com/0b5c"
+    },
+    {
+     "id": 3,
+     "url": "https://bank.com../"
+    },
+    {
+     "id": 4,
+     "url": "https://bank.com./x"
+    }
+   ],
+   "name": "frames: user information, blob, an empty label, and a top frame not in the list",
+   "op": "frames",
+   "result": [
+    1,
+    4
+   ],
+   "top": "https://bank.com/login"
+  }
+ ],
+ "description": "Autofill matching: URI preparation with the scheme prefix, trim, user information, and empty-label rules, cross-site lookalikes, page URLs, registrable domains with the known_suffixes table, every match mode, the scheme rule and local hosts, item outcomes and candidate order, frame selection, and save offers. Expected values are worked out from the spec text by hand. The known-suffix lookup returns the longest entry of known_suffixes that equals the host or a sequence of its trailing labels, except that suffix_answers replaces the answer for the hosts it lists; each of those answers fails the check, so a registrable result is null and every match involving such a host is none. Items are compact: a client expands each into a full body item with these values. Hosts and origins are serialised as WHATWG URLs write them, with one trailing dot of a domain removed.",
+ "known_suffixes": [
+  "com",
+  "net",
+  "org",
+  "de",
+  "io",
+  "github.io",
+  "uk",
+  "co.uk",
+  "arpa",
+  "xn--p1ai"
+ ],
+ "suffix_answers": {
+  "dotted.example.com": "com.",
+  "empty.example.com": "",
+  "lead.example.com": ".example.com",
+  "short.com": "x.short.com",
+  "tricky.example.com": "ample.com",
+  "upper.example.com": "COM"
+ }
+}

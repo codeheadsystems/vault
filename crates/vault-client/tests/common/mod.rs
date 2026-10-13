@@ -4,11 +4,11 @@
 #![allow(dead_code)]
 
 use std::collections::VecDeque;
-use vault_client::commit::Commit;
+use vault_client::commit::{Commit, CommitHost, apply};
 use vault_client::sync::{Mode, SyncReport, sync};
 use vault_client::{
     Answer, ClientState, Finished, Input, Keys, Machine, Precondition, Prompt, Request, Response,
-    Save, SavedKey, SecretKeyChange, SecretKeyStore, Step,
+    Save, SavedKey, SecretKeyStore, Step,
 };
 use vault_core::body::{Body, ItemFields, Login, TYPE_LOGIN};
 use vault_core::file::{open_file, seal_file, seal_file_with_rng};
@@ -376,6 +376,47 @@ pub fn login(name: &str, password: &str) -> ItemFields {
     }
 }
 
+/// A client's stored state and secret key slots, as [`apply`] writes them.
+pub struct Slots<'a> {
+    pub state: &'a mut ClientState,
+    pub current: &'a mut Option<SecretKey>,
+    pub pending: &'a mut Option<SecretKey>,
+}
+
+impl CommitHost for Slots<'_> {
+    type Error = &'static str;
+
+    fn store_current(
+        &mut self,
+        _: SecretKeyStore,
+        _: &[u8; 16],
+        key: &SecretKey,
+    ) -> Result<(), &'static str> {
+        *self.current = Some(key.clone_secret());
+        Ok(())
+    }
+
+    fn copy_pending_to_current(
+        &mut self,
+        _: SecretKeyStore,
+        _: &[u8; 16],
+    ) -> Result<(), &'static str> {
+        let p = self.pending.as_ref().ok_or("no pending key")?;
+        *self.current = Some(p.clone_secret());
+        Ok(())
+    }
+
+    fn delete_pending(&mut self, _: SecretKeyStore, _: &[u8; 16]) -> Result<(), &'static str> {
+        *self.pending = None;
+        Ok(())
+    }
+
+    fn write_state(&mut self, state: &ClientState) -> Result<(), &'static str> {
+        *self.state = state.clone();
+        Ok(())
+    }
+}
+
 /// A client: its state on disk, its cached vault key, and its device ID.
 pub struct Client {
     pub state: ClientState,
@@ -443,26 +484,22 @@ impl Client {
         now: u64,
     ) -> Commit {
         let mut rng = self.rng();
-        let c = finished
-            .commit(started, &self.state, background, now, &mut rng)
-            .expect("commit");
-        if let Some(s) = &c.state {
-            self.state = s.clone();
-        }
+        let on_disk = self.state.clone();
+        let mut slots = Slots {
+            state: &mut self.state,
+            current: &mut self.sk,
+            pending: &mut self.pending,
+        };
+        let applied = apply(
+            finished, started, &on_disk, background, now, &mut rng, &mut slots,
+        )
+        .expect("commit")
+        .expect("not superseded");
+        assert!(applied.pending_left.is_none());
         if let Some(vk) = &finished.vault_key {
             self.vk = Some(vk.clone_secret());
         }
-        match &finished.secret_key {
-            Some(SecretKeyChange::Replace(sk)) => self.sk = Some(sk.clone_secret()),
-            Some(SecretKeyChange::PromotePending) => self.sk = self.pending.take(),
-            Some(SecretKeyChange::DiscardPending) => self.pending = None,
-            Some(SecretKeyChange::ReplaceAndDiscardPending(sk)) => {
-                self.sk = Some(sk.clone_secret());
-                self.pending = None;
-            }
-            None => {}
-        }
-        c
+        applied.commit
     }
 
     /// Runs a procedure to the end, committing its saves and its end as the CLI does.
