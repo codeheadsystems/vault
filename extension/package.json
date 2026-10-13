@@ -1,0 +1,32 @@
+{
+  "name": "vault-firefox",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The vault Firefox extension",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.test.json",
+    "test": "node licences.mjs && npm audit --omit=dev && node --test \"test/*.test.ts\"",
+    "e2e": "VAULT_E2E_TIMING=1 node build.mjs && node --test --test-concurrency=1 \"e2e/*.test.ts\"",
+    "pack": "node build.mjs && node pack.mjs",
+    "sign": "node build.mjs && node sign.mjs",
+    "start": "node build.mjs && node start.ts",
+    "licences": "node licences.mjs",
+    "audit": "npm audit --omit=dev",
+    "source": "node source.mjs"
+  },
+  "devDependencies": {
+    "@types/firefox-webext-browser": "143.0.1",
+    "@types/node": "26.6.5",
+    "binaryen": "132.0.0",
+    "esbuild": "0.28.2",
+    "fake-indexeddb": "6.2.5",
+    "happy-dom": "21.0.1",
+    "typescript": "7.0.2"
+  }
+}

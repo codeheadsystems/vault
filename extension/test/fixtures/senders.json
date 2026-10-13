@@ -1,0 +1,130 @@
+{
+  "id": "vault@codeheadsystems.com",
+  "base": "moz-extension://5a5f2a6e-0000-4000-8000-00000000e2e0/",
+  "senders": {
+    "popup": {
+      "contextId": 412316860771,
+      "documentId": "01a957d6-2e78-646b-7e60-9ec7b6061273",
+      "envType": "addon_child",
+      "frameId": 0,
+      "id": "vault@codeheadsystems.com",
+      "origin": "moz-extension://5a5f2a6e-0000-4000-8000-00000000e2e0",
+      "tab": {
+        "active": true,
+        "attention": false,
+        "audible": false,
+        "autoDiscardable": true,
+        "cookieStoreId": "firefox-default",
+        "discarded": false,
+        "groupId": -1,
+        "height": 599,
+        "hidden": false,
+        "highlighted": true,
+        "id": 3,
+        "incognito": false,
+        "index": 0,
+        "isInReaderMode": false,
+        "lastAccessed": 1791866614500,
+        "mutedInfo": {
+          "muted": false
+        },
+        "pinned": false,
+        "sharingState": {
+          "camera": false,
+          "microphone": false
+        },
+        "splitViewId": -1,
+        "status": "complete",
+        "successorTabId": -1,
+        "title": "vault",
+        "url": "moz-extension://5a5f2a6e-0000-4000-8000-00000000e2e0/popup.html",
+        "width": 400,
+        "windowId": 39
+      },
+      "url": "moz-extension://5a5f2a6e-0000-4000-8000-00000000e2e0/popup.html"
+    },
+    "vault page": {
+      "contextId": 412316860799,
+      "documentId": "7d882f71-e70f-e58f-5b72-5210d9921d00",
+      "envType": "addon_child",
+      "frameId": 0,
+      "id": "vault@codeheadsystems.com",
+      "origin": "moz-extension://5a5f2a6e-0000-4000-8000-00000000e2e0",
+      "tab": {
+        "active": true,
+        "attention": false,
+        "audible": false,
+        "autoDiscardable": true,
+        "cookieStoreId": "firefox-default",
+        "discarded": false,
+        "groupId": -1,
+        "height": 682,
+        "hidden": false,
+        "highlighted": true,
+        "id": 4,
+        "incognito": false,
+        "index": 1,
+        "isInReaderMode": false,
+        "lastAccessed": 1791866614571,
+        "mutedInfo": {
+          "muted": false
+        },
+        "pinned": false,
+        "sharingState": {
+          "camera": false,
+          "microphone": false
+        },
+        "splitViewId": -1,
+        "status": "complete",
+        "successorTabId": -1,
+        "title": "vault",
+        "url": "moz-extension://5a5f2a6e-0000-4000-8000-00000000e2e0/page.html",
+        "width": 1366,
+        "windowId": 1
+      },
+      "url": "moz-extension://5a5f2a6e-0000-4000-8000-00000000e2e0/page.html"
+    },
+    "content script": {
+      "contextId": 1236950581253,
+      "documentId": "39c99751-d470-78db-aaad-7534d267ea51",
+      "envType": "content_child",
+      "frameId": 0,
+      "id": "vault@codeheadsystems.com",
+      "origin": "http://www.example.com:42875",
+      "tab": {
+        "active": true,
+        "attention": false,
+        "audible": false,
+        "autoDiscardable": true,
+        "cookieStoreId": "firefox-default",
+        "discarded": false,
+        "groupId": -1,
+        "height": 682,
+        "hidden": false,
+        "highlighted": true,
+        "id": 1,
+        "incognito": false,
+        "index": 0,
+        "isArticle": false,
+        "isInReaderMode": false,
+        "lastAccessed": 1791866614620,
+        "mutedInfo": {
+          "muted": false
+        },
+        "pinned": false,
+        "sharingState": {
+          "camera": false,
+          "microphone": false
+        },
+        "splitViewId": -1,
+        "status": "complete",
+        "successorTabId": -1,
+        "title": "test",
+        "url": "http://www.example.com:42875/login.html",
+        "width": 1366,
+        "windowId": 1
+      },
+      "url": "http://www.example.com:42875/login.html"
+    }
+  }
+}

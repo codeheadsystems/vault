@@ -1,0 +1,8 @@
+# WebAssembly builds (vault-wasm, and the WASM checks of vault-core, vault-client, and
+# vault-interop) use the SIMD128 instructions, which Firefox has supported since version 89. A
+# RUSTFLAGS environment variable replaces these flags, so CI's WASM job sets the feature there too.
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "target-feature=+simd128"]
+# `cargo test --target wasm32-unknown-unknown` runs the tests under Node with the runner that
+# wasm-bindgen-cli installs, at the version pinned in the workspace Cargo.toml.
+runner = "wasm-bindgen-test-runner"

@@ -375,15 +375,17 @@ once in `vault-client`, so Firefox and Android cannot drift apart.
 Firefox:
 
 - Base domain means the registrable domain (eTLD+1) from the Public Suffix List. An item for one
-  `github.io` site does not match another, and a host under a suffix the list does not know, such
-  as `nas.lan`, matches only itself.
-- Matching uses the URL of the tab's top frame. An `https` URI never fills an `http` page, except
-  on a local host (loopback, a private address, or a name such as `nas.lan`), and there only after
-  a confirmation. A user on a public network clicks through a confirmation too easily for it to
-  protect a public site.
+  `github.io` site does not match another, and a host under a suffix the list does not know, such as
+  `nas.lan`, matches only itself.
+- Matching uses the URL of the tab's top frame. An `https` URI never fills an `http` page, except on
+  a local host (loopback, a private address, or a name such as `nas.lan`), and there only after a
+  confirmation. A user on a public network clicks through a confirmation too easily for it to
+  protect a public site. A fill the user starts from the popup for an item that does not match the
+  page asks first, naming the page's host, and is refused outright on an `http` page that is not a
+  local host.
 - Fill reaches only the top frame and frames with the same origin as the top frame. A cross-origin
-  iframe is never filled. The fill script checks the origin it runs in before writing anything, so
-  a frame that navigates while the user picks an item receives nothing.
+  iframe is never filled. The fill script checks the origin it runs in before writing anything, so a
+  frame that navigates while the user picks an item receives nothing.
 - The origin comes from the browser (the message sender and the tab URL), never from the page or a
   message a content script relays from it.
 - The decrypted vault stays in the background script. A content script receives only the one

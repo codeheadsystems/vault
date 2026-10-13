@@ -54,10 +54,50 @@ jobs:
 
   wasm:
     runs-on: ubuntu-latest
+    env:
+      # RUSTFLAGS replaces the flags in .cargo/config.toml, so the SIMD128 feature is repeated.
+      RUSTFLAGS: -D warnings -C target-feature=+simd128
     steps:
       - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2
       - run: cargo build -p vault-core -p vault-client -p vault-interop --target wasm32-unknown-unknown --release
+      - name: The Firefox extension's module
+        run: cargo build -p vault-wasm --target wasm32-unknown-unknown --profile wasm
+      - name: wasm-bindgen-cli at the version Cargo.lock pins
+        run: cargo install --locked wasm-bindgen-cli --version "$(cargo pkgid wasm-bindgen | sed 's/.*@//')"
+      - name: The spec vectors through the WASM bindings, under Node
+        run: cargo test -p vault-wasm --target wasm32-unknown-unknown
+      - name: The release gate against the module built with the wasm profile
+        run: cargo test -p vault-wasm --target wasm32-unknown-unknown --profile wasm --test release_gate
+
+  extension:
+    runs-on: ubuntu-latest
+    env:
+      # RUSTFLAGS replaces the flags in .cargo/config.toml, so the SIMD128 feature is repeated.
+      RUSTFLAGS: -D warnings -C target-feature=+simd128
+    defaults:
+      run:
+        working-directory: extension
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+      - name: wasm-bindgen-cli at the version Cargo.lock pins
+        run: cargo install --locked wasm-bindgen-cli --version "$(cargo pkgid wasm-bindgen | sed 's/.*@//')"
+      - run: npm ci
+      - run: npm run typecheck
+      - name: The licence check, npm audit of the shipped dependencies, and the unit tests
+        run: npm test
+      - name: Build vault-wasm and the extension, and pack the .xpi
+        run: npm run pack
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vault-firefox-unsigned
+          path: extension/artifacts/*.xpi
 
   vectors:
     runs-on: ubuntu-latest

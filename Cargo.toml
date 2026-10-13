@@ -5,6 +5,7 @@ members = [
     "crates/vault-interop",
     "crates/vault-server",
     "crates/vault-cli",
+    "crates/vault-wasm",
 ]
 resolver = "3"
 
@@ -54,6 +55,10 @@ nix = { version = "0.29", default-features = false, features = ["fs"] }
 memmap2 = "0.9"
 clap_complete = "4"
 webpki-roots = "1"
+# Pinned exactly: wasm-bindgen-cli must be the same version.
+wasm-bindgen = "=0.2.129"
+js-sys = "0.3"
+wasm-bindgen-test = "0.3"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
@@ -70,3 +75,11 @@ opt-level = 3
 
 [profile.release]
 overflow-checks = true
+
+# The Firefox extension's WASM module: `cargo build -p vault-wasm --target wasm32-unknown-unknown
+# --profile wasm`.
+[profile.wasm]
+inherits = "release"
+lto = "fat"
+codegen-units = 1
+opt-level = 3

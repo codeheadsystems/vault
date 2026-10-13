@@ -1,0 +1,28 @@
+[package]
+name = "vault-wasm"
+version = "0.1.0"
+description = "wasm-bindgen bindings over vault-core and vault-client for the Firefox extension"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+vault-core = { path = "../vault-core" }
+vault-client = { path = "../vault-client" }
+serde_json.workspace = true
+hex.workspace = true
+zeroize.workspace = true
+wasm-bindgen.workspace = true
+js-sys.workspace = true
+# Randomness from crypto.getRandomValues.
+getrandom = { workspace = true, features = ["js"] }
+
+[dev-dependencies]
+wasm-bindgen-test.workspace = true
+
+[lints]
+workspace = true
