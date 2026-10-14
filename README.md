@@ -12,7 +12,7 @@ and its recent revisions, and never holds a key.
 | 1 | Format spec, `vault-core`, and test vectors | Done |
 | 2 | `vault serve` and the command-line client, with Bitwarden import and export | Done; in trial use |
 | 3 | Firefox extension | Built; signing and trial use pending |
-| 4 | Android app | In design |
+| 4 | Android app | Designed; in implementation |
 | 5 | TOTP (v1.1), then WebAuthn passkeys (v1.2) | Not started |
 
 The format is not yet frozen for a release. Bitwarden stays the primary password manager until
@@ -95,6 +95,7 @@ vault sync
 | [CLI](docs/cli.md) | Commands, local state, agent, sync behaviour, and output |
 | [Bitwarden](docs/bitwarden.md) | Import and export mapping |
 | [Firefox extension](docs/firefox.md) | Extension design: storage, fill, save offers, and setup |
+| [Android app](docs/android.md) | App design: bindings, storage, unlock, autofill, and setup |
 
 ## Licence
 

@@ -16,6 +16,7 @@ bytes and never holds a key. The project is MIT licensed.
 | `docs/cli.md` | The CLI: commands, local state, agent, sync behaviour, output |
 | `docs/bitwarden.md` | Bitwarden import and export mapping |
 | `docs/firefox.md` | The Firefox extension: components, storage, fill, save offers, and setup |
+| `docs/android.md` | The Android app: bindings, storage, unlock, transport, autofill, and setup |
 | `docs/phase-2-trial.md` | The checklist for the phase 2 trial of the CLI |
 
 The spec is normative. Where code and spec disagree, the code is wrong until a spec change is

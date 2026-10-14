@@ -293,8 +293,8 @@ click does.
 ## Distribution
 
 Firefox release builds load only signed extensions. The extension is signed as an unlisted add-on
-through the addons.mozilla.org API as an unlisted add-on, which needs an AMO account and an API key
-and secret, read from the environment. A signed `.xpi` installs from a file.
+through the addons.mozilla.org API, which needs an AMO account and an API key and secret, read
+from the environment. A signed `.xpi` installs from a file.
 
 The manifest fixes `browser_specific_settings.gecko.id` as `vault@codeheadsystems.com` from the
 first build, because Firefox keys the extension's storage by it and a change loses every device's

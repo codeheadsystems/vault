@@ -398,8 +398,21 @@ Android:
   If the digest differs, or none is recorded, the user confirms, with the app's label and package
   name shown, before anything fills.
 - A web domain reported by the autofill request is used only when the requesting app is on an
-  allowlist of browser packages. From any other app, matching is by package name and certificate,
-  so a WebView inside an ordinary app cannot ask for a website's credentials.
+  allowlist of browser packages and certificates: Chrome and Firefox. From any other app, matching
+  is by package name and certificate, so a WebView inside an ordinary app cannot ask for a
+  website's credentials.
+- An app is offered only the items already associated with it, through a recorded binding or an
+  imported `androidapp://` URI. Any other item takes an explicit choice and a confirmation naming
+  the item and the app.
+- Android reports a web domain without a port or a path, and each field's own frame host, but not
+  which frame is the top page. Modes that need a port or a path ask first, and a fill reaches only
+  the visible fields whose host and scheme equal the focused field's. A frame from the same host on
+  another port cannot be told apart, and a framed page cannot be told from a top-level one. Chrome
+  (133, tested 2026-10-13) labels a form in a cross-origin frame with the top page's host, so on a
+  matched site such a frame receives a Chrome fill when I pick an item in it. Both are accepted
+  (decided 2026-10-13); a current Chrome is re-tested on the phone.
+- The fill picker unlocks only by biometric prompt; the master password is typed only in the app
+  itself, never on a screen another app opened.
 
 ## Functional requirements
 
@@ -481,7 +494,7 @@ P0 blocks v1.0; P1 should land in v1.0 but does not block it; P2 is after v1.0.
 | AND-2 | Browse, search, view, and copy; copied secrets flagged sensitive | P0 |
 | AND-3 | Autofill service for apps and browsers, following the autofill matching rules (signing certificate binding; web domains only from allowlisted browsers) | P0 |
 | AND-4 | Biometric unlock: the cached vault key is wrapped by a Keystore key that requires strong biometric authentication for every use (`CryptoObject`) and is invalidated when a new biometric is enrolled | P0 |
-| AND-9 | Refuse plain `http`; pin the server certificate fingerprint from the setup QR code | P0 |
+| AND-9 | Refuse plain `http`, loopback included, in release builds (every app on a phone shares loopback); pin the server certificate fingerprint from the setup QR code | P0 |
 | AND-5 | Add, edit, and generate | P0 |
 | AND-6 | Offline use from the local copy | P0 |
 | AND-7 | Minimum Android 10 | P0 |
@@ -519,7 +532,7 @@ P0 blocks v1.0; P1 should land in v1.0 but does not block it; P2 is after v1.0.
 | Recovery | Emergency kit plus master password plus a new token opens the vault on a fresh device |
 | Integrity | No client ever merges a lower generation or treats an unreadable remote as empty |
 | Cost | One small process on hardware I already run |
-| Licence | MIT; dependencies MIT, Apache-2.0, BSD, ISC, Zlib, or Unicode, enforced by `cargo-deny`; one exception, `webpki-roots` (CDLA-Permissive-2.0), because it is the Mozilla root set the CLI trusts for a publicly trusted certificate |
+| Licence | MIT; dependencies MIT, Apache-2.0, BSD, ISC, Zlib, Unicode, or MPL-2.0, enforced by `cargo-deny`; one exception, `webpki-roots` (CDLA-Permissive-2.0), because it is the Mozilla root set the CLI trusts for a publicly trusted certificate. MPL-2.0 covers UniFFI, its generated Kotlin, and the Public Suffix List bundled in the Android app, which no tool checks because it is not a package |
 | Simplicity | Format spec (header, body, item schema, merge rule, server API) kept as short as the rules allow; no client-specific data in the vault file |
 
 ## Complexity guardrails
@@ -572,6 +585,7 @@ with zero unexplained losses.
 | Network reach | v1.x assumes clients reach `vault serve` on the home network; away from home, the phone works from its local copy and syncs on return (decided 2026-10-12) |
 | Secret key format | `VLT1-` Crockford base32 with check value, reused unchanged from `../vlt` (decided 2026-10-12) |
 | Client order | CLI, then Firefox, then Android (decided 2026-10-12) |
+| Android distribution | A sideloaded APK signed with my own key; application ID `com.codeheadsystems.vault`; no Google Play services (decided 2026-10-13) |
 | Firefox architecture | Standalone WASM, not native messaging to the CLI (decided 2026-10-12) |
 | Firefox server trust | Certificate exception accepted once in Firefox, which pins the certificate; `http://localhost` when the server is local (decided and tested 2026-10-12) |
 | FreeBSD | Not in v1.x; a future direction (decided 2026-10-12) |
