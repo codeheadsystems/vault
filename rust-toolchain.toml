@@ -2,4 +2,4 @@
 channel = "1.96.0"
 profile = "minimal"
 components = ["rustfmt", "clippy"]
-targets = ["wasm32-unknown-unknown"]
+targets = ["wasm32-unknown-unknown", "aarch64-linux-android", "x86_64-linux-android"]

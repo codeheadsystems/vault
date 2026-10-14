@@ -1,0 +1,36 @@
+[package]
+name = "vault-android"
+version = "0.1.0"
+description = "UniFFI bindings over vault-core and vault-client for the Android app"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+# `cargo run --locked -p vault-android --features bindgen --bin uniffi-bindgen -- generate
+# --library <libvault_android.so> --language kotlin --out-dir <dir>`
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
+required-features = ["bindgen"]
+
+[features]
+bindgen = ["uniffi/cli"]
+
+[dependencies]
+vault-core = { path = "../vault-core" }
+vault-client = { path = "../vault-client" }
+hex.workspace = true
+idna.workspace = true
+getrandom.workspace = true
+zeroize.workspace = true
+uniffi.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[lints]
+workspace = true

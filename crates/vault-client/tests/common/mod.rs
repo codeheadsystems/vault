@@ -8,7 +8,7 @@ use vault_client::commit::{Commit, CommitHost, apply};
 use vault_client::sync::{Mode, SyncReport, sync};
 use vault_client::{
     Answer, ClientState, Finished, Input, Keys, Machine, Precondition, Prompt, Request, Response,
-    Save, SavedKey, SecretKeyStore, Step,
+    Save, SecretKeyStore, Step,
 };
 use vault_core::body::{Body, ItemFields, Login, TYPE_LOGIN};
 use vault_core::file::{open_file, seal_file, seal_file_with_rng};
@@ -396,6 +396,16 @@ impl CommitHost for Slots<'_> {
         Ok(())
     }
 
+    fn store_pending(
+        &mut self,
+        _: SecretKeyStore,
+        _: &[u8; 16],
+        key: &SecretKey,
+    ) -> Result<(), &'static str> {
+        *self.pending = Some(key.clone_secret());
+        Ok(())
+    }
+
     fn copy_pending_to_current(
         &mut self,
         _: SecretKeyStore,
@@ -515,16 +525,14 @@ impl Client {
         let token = self.token.clone();
         let mut rng = self.rng();
         let run = drive_with(m, server, &token, now, answers, &mut |s: &Save| {
-            let c = s
-                .commit(&started, &self.state, now, &mut rng)
-                .expect("save");
-            if let Some(st) = c.state {
-                self.state = st;
-            }
-            match &s.secret_key {
-                SavedKey::Current(k) => self.sk = Some(k.clone_secret()),
-                SavedKey::Pending(k) => self.pending = Some(k.clone_secret()),
-            }
+            let on_disk = self.state.clone();
+            let mut host = Slots {
+                state: &mut self.state,
+                current: &mut self.sk,
+                pending: &mut self.pending,
+            };
+            vault_client::commit::apply_save(s, &started, &on_disk, now, &mut rng, &mut host)
+                .unwrap_or_else(|_| panic!("save"));
             started = s.state.clone();
         });
         self.commit(&started, &run.finished, now);

@@ -51,6 +51,7 @@ pub mod recover;
 pub mod restore;
 pub mod revisions;
 mod run;
+pub mod session;
 pub mod setup;
 pub mod state;
 pub mod sync;

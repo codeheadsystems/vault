@@ -291,28 +291,23 @@ pub fn setup(ctx: &Ctx) -> Result<JsonResult> {
     finish(f.result, t.as_ref())?;
     let state = f
         .state
+        .clone()
         .ok_or_else(|| CliError::other("state.invalid", "setup returned no state"))?;
-    let sk = match &f.secret_key {
-        Some(SecretKeyChange::Replace(sk) | SecretKeyChange::ReplaceAndDiscardPending(sk)) => sk,
-        Some(SecretKeyChange::PromotePending | SecretKeyChange::DiscardPending) | None => {
-            return Err(CliError::other(
-                "state.invalid",
-                "setup returned no secret key to store",
-            ));
-        }
-    };
+    if !matches!(f.secret_key, Some(SecretKeyChange::Replace(_))) {
+        return Err(CliError::other(
+            "state.invalid",
+            "setup returned no secret key to store",
+        ));
+    }
     {
         let lock = store::lock(&ctx.paths)?;
-        secrets::store(
-            &ctx.paths,
-            kind,
-            &state.vault_id,
-            secrets::Slot::Current,
-            sk,
-        )?;
+        // The device ID and server.json go first, so the state, written last, never names a
+        // device without them. A failure to store the secret key leaves the two behind; with no
+        // state, the device is not set up, and the next `vault setup` overwrites them.
         store::create_device_id(&ctx.paths)?;
         store::write_server(&ctx.paths, &server)?;
-        store::write_state(&ctx.paths, &lock, &state)?;
+        // The secret key, then the state, which makes the device set up.
+        session::apply_first(&ctx.paths, &lock, &f)?;
     }
     ctx.out.err("This device is set up.");
     if ctx.use_agent()

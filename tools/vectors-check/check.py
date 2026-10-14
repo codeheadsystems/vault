@@ -860,6 +860,143 @@ def af_save(page_text, user, password, items, lookup):
     return {"action": "new", "name": page["host"], "uri": page["origin"], "match": "base_domain"}
 
 
+def af_android_page(scheme, host):
+    """The Android web page <scheme>://<host>/, or None when the scheme is not http or https, the
+    host is not a host alone (no / \\ ? # @ :, ASCII whitespace, or control character, except :
+    inside a bracketed IPv6 address; so no port, the default included), or it does not parse."""
+    if scheme not in ("http", "https"):
+        return None
+    bracketed = len(host) > 2 and host[0] == "[" and host[-1] == "]"
+    inner = host[1:-1] if bracketed else host
+    if not inner or any(c in "/\\?#@[] " or (c == ":" and not bracketed)
+                        or unicodedata.category(c) == "Cc" for c in inner):
+        return None
+    text = f"{scheme}://{host}/"
+    try:
+        u = ada_url.URL(text)
+    except ValueError:
+        return None
+    if u.port or u.pathname != "/" or "?" in u.href or "#" in u.href or u.username or u.password:
+        return None
+    return af_parse(text)
+
+
+def af_android_match(page, uri, mode, lookup):
+    """An item URI against an Android web page: the mode table, then the scheme rule."""
+    item = af_prepare(uri)
+    if item is None:
+        return "none"
+    try:
+        af_suffix(page, lookup)
+        af_suffix(item, lookup)
+    except BadSuffix:
+        return "none"
+    local = af_local(page, lookup)
+    same_host = page["host"] == item["host"]
+    out = "none"
+    if mode == "base_domain" and af_registrable(page, lookup) == af_registrable(item, lookup):
+        out = "fill"
+    elif mode == "host" and same_host:
+        out = "fill" if item["port"] is None and not local else "confirm"
+    elif mode in ("starts_with", "exact") and same_host and page["scheme"] == item["scheme"]:
+        out = "confirm"
+    if out != "none" and item["scheme"] == "https" and page["scheme"] == "http":
+        out = "confirm" if local else "none"
+    return out
+
+
+def af_order(scored):
+    """Candidate order: outcome not none, fill first, then name, then id."""
+    out = [(it, o) for it, o in scored if o != "none"]
+    out.sort(key=lambda x: (-AF_RANK[x[1]], x[0]["name"], x[0]["id"]))
+    return out
+
+
+def af_android_candidates(page, items, lookup):
+    scored = []
+    for it in items:
+        best = "none"
+        if it["type"] == "login":
+            for u in it["uris"]:
+                o = af_android_match(page, u["uri"], u["match"], lookup)
+                if AF_RANK[o] > AF_RANK[best]:
+                    best = o
+        scored.append((it, best))
+    return af_order(scored)
+
+
+AF_MODES = ("base_domain", "host", "starts_with", "exact")
+AF_KINDS = ("fill", "rebind", "signature_changed", "bind", "unverified")
+
+
+def af_current(app):
+    """The one current digest, or None for more than one signer or none read."""
+    return app["signers"][0] if len(app["signers"]) == 1 and not app["multiple_signers"] else None
+
+
+def af_app_kind(item, app):
+    """The item's kind on an app page, or None without an association."""
+    if item["type"] != "login":
+        return None
+    pkg = app["package"]
+    bound = [a["cert_sha256"] for a in item.get("apps", []) if a["package"] == pkg]
+    unbound = False
+    for u in item["uris"]:
+        t = u["uri"].strip(" \t\n\f\r")
+        if (u["match"] in AF_MODES and t[:13].isascii() and t[:13].lower() == "androidapp://"
+                and t[13:] == pkg):
+            unbound = True
+    if not bound and not unbound:
+        return None
+    cur = af_current(app)
+    if cur is None:
+        return "unverified"
+    kinds = ["bind"] if unbound else []
+    for c in bound:
+        kinds.append("fill" if c == cur else "rebind" if c in app["history"] else
+                     "signature_changed")
+    return min(kinds, key=AF_KINDS.index)
+
+
+def af_app_candidates(app, items):
+    scored = []
+    for it in items:
+        k = af_app_kind(it, app)
+        scored.append((it, "none" if k is None else "fill" if k == "fill" else "confirm"))
+    return af_order(scored)
+
+
+def af_app_bind(item, app):
+    """The item's apps after a confirmed fill, or None when it records nothing."""
+    k = af_app_kind(item, app)
+    cur = af_current(app)
+    apps = [dict(a) for a in item.get("apps", [])]
+    if k == "bind":
+        return apps + [{"package": app["package"], "cert_sha256": cur}]
+    if k != "rebind":
+        return None
+    out = []
+    for a in apps:
+        if a["package"] == app["package"] and a["cert_sha256"] in app["history"]:
+            a["cert_sha256"] = cur
+            if a in out:
+                continue
+        out.append(a)
+    return out
+
+
+def af_offer(fills, user, password, new):
+    """The save offer rules over the items whose outcome (or kind) is fill."""
+    if password == "":
+        return {"action": "none"}
+    same = [it for it in fills if it["username"] == user]
+    if any(it["password"] == password for it in same):
+        return {"action": "none"}
+    if same:
+        return {"action": "update", "id": same[0]["id"]}
+    return {"action": "new", **new}
+
+
 # File checks
 
 
@@ -1163,12 +1300,47 @@ def run(ck):
                 if (fp := af_parse(f["url"])) is not None and fp["origin"] == top_url["origin"]]
         elif op == "save":
             got = af_save(c["page"], c["username"], c["password"], c["items"], lookup)
+        elif op == "android_page":
+            got = af_view(af_android_page(c["scheme"], c["host"]))
+        elif op == "android_match":
+            pg = af_android_page(c["scheme"], c["host"])
+            got = "none" if pg is None else af_android_match(pg, c["uri"], c["match"], lookup)
+        elif op == "android_items":
+            pg = af_android_page(c["scheme"], c["host"])
+            got = [] if pg is None else [{"id": it["id"], "outcome": o}
+                                         for it, o in af_android_candidates(pg, c["items"], lookup)]
+        elif op == "android_save":
+            pg = af_android_page(c["scheme"], c["host"])
+            if pg is None:
+                got = {"action": "none"}
+            else:
+                fills = [it for it, o in af_android_candidates(pg, c["items"], lookup) if o == "fill"]
+                new = {"name": pg["host"], "apps": [],
+                       "uris": [{"uri": pg["origin"], "match": "base_domain"}]}
+                got = af_offer(fills, c["username"], c["password"], new)
+        elif op == "app_items":
+            got = [{"id": it["id"], "outcome": o, "kind": af_app_kind(it, c["app"])}
+                   for it, o in af_app_candidates(c["app"], c["items"])]
+        elif op == "app_bind":
+            got = af_app_bind(c["item"], c["app"])
+        elif op == "app_save":
+            app = c["app"]
+            fills = [it for it in c["items"] if af_app_kind(it, app) == "fill"]
+            fills = [it for it, _ in af_order([(it, "fill") for it in fills])]
+            cur = af_current(app)
+            new = ({"name": app["package"], "uris": [],
+                    "apps": [{"package": app["package"], "cert_sha256": cur}]} if cur else
+                   {"name": app["package"], "apps": [],
+                    "uris": [{"uri": f"androidapp://{app['package']}", "match": "base_domain"}]})
+            got = af_offer(fills, c["username"], c["password"], new)
         else:
             ck.failures.append(f"{w}: unknown op {op!r}")
             continue
         ck.eq(w, got, c["result"])
     print("autofill cases by op:", ", ".join(f"{k} {v}" for k, v in sorted(ops.items())))
-    minimums = {"prepare": 40, "page": 8, "registrable": 15, "match": 100, "items": 5, "frames": 3,
+    minimums = {"android_page": 10, "android_match": 25, "android_items": 3, "android_save": 5,
+                "app_items": 3, "app_bind": 5, "app_save": 5,
+                "prepare": 40, "page": 8, "registrable": 15, "match": 100, "items": 5, "frames": 3,
                 "save": 10}
     for op, least in minimums.items():
         ck.eq(f"autofill has at least {least} {op} cases", ops.get(op, 0) >= least, True)

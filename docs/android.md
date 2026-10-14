@@ -67,15 +67,15 @@ key crosses into Kotlin in one place: the biometric `Cipher`, which wraps and un
 
 UniFFI is pinned to an exact version (`=0.32.x`), as `wasm-bindgen` is. `uniffi-bindgen` is a
 binary behind a feature of `vault-android`, run with `cargo run --locked`. UniFFI generates about
-1,400 lines of Kotlin, loaded through JNA. No function is `async`; Kotlin calls the library from a
+8,000 lines of Kotlin, loaded through JNA. No function is `async`; Kotlin calls the library from a
 background dispatcher. The crate compiles under `#![forbid(unsafe_code)]`; the unsafe code is in
 UniFFI's scaffolding and in JNA.
 
 | Measure | Value |
 | --- | --- |
-| `cargo ndk -t arm64-v8a -t x86_64 -P 29` from clean | 18.7 s |
-| Stripped library, `arm64-v8a` and `x86_64` | 923 KB and 1,023 KB |
-| Release APK, R8, `arm64-v8a` and `x86_64`, with CameraX and ZXing | 3.93 MB |
+| `cargo ndk -t arm64-v8a -t x86_64 -P 29` with the `android` profile, from clean | 25 s |
+| Stripped library, `arm64-v8a` and `x86_64` | 1,762 KB and 1,984 KB |
+| Release APK, R8, `arm64-v8a` and `x86_64`, with Compose, CameraX, and ZXing | 8.0 MB |
 | Floor unlock, Argon2id only, API 29 and API 36 emulators | 150 to 214 ms and 227 to 353 ms |
 | Full unlock of a real vault file, API 29 emulator | 123 to 162 ms |
 | Ceiling, 256 MiB and 10 iterations, API 29 emulator | about 2.4 s |
@@ -85,7 +85,9 @@ runs it as scalar code: an estimate, not a measurement, puts the floor at 0.3 to
 phone and 1 to 1.5 s on a 2019 Cortex-A53 phone. Argon2id allocates from the native heap, outside
 the Java heap limit; a 2 GiB API 29 emulator ran the ceiling without a low-memory kill. NDK r28
 aligns the library to 16 KB pages, which Android 15 requires. JNA ships seven ABIs, so the build
-keeps `arm64-v8a` and `x86_64` only.
+keeps `arm64-v8a` and `x86_64` only. About 1 MB of each library is code, mostly the `vault-client`
+machines and the UniFFI scaffolding, and 454 KB is the Public Suffix List's rules; the library keeps
+`opt-level = 3` for Argon2id's speed.
 
 ## Storage
 
@@ -134,8 +136,9 @@ The vault key lives in Rust memory while the vault is unlocked.
   outside the state lock, the app offers to wrap the new vault key with one biometric prompt. When a
   sync finds a credential change made elsewhere, the app asks for the new master password, as the
   CLI does.
-- A credential change, a token revocation, and a restore each need a fresh biometric prompt or the
-  master password immediately before they start, even while unlocked. On a locked device they stay
+- A credential change and a restore each need a fresh biometric prompt or the master password
+  immediately before they start, even while unlocked. Tokens are revoked on the server, not from the
+  app. On a locked device they stay
   available after a master password or biometric unlock, which keeps the threat model's recovery
   path.
 
@@ -193,9 +196,10 @@ app until the user picks an item.
    attributes (Firefox reports an `inputType` of 0), and input types, and the `webDomain` and
    `webScheme` of the focused field: from its own node or its nearest ancestor with a non-empty
    `webDomain`. Firefox sets them on every node of a form; Chrome sets them on a container node;
-   Firefox's root node has none, or an empty one. It returns `null` for the app's own package, for a
-   request with `FLAG_COMPATIBILITY_MODE_REQUEST`, and when it finds no field. The service declares
-   no compatibility packages.
+   Firefox's root node has none, or an empty one. It returns `null` for the app's own package, for
+   Settings (`com.android.settings`) and System UI (`com.android.systemui`), whose password fields
+   hold the device PIN, for a request with `FLAG_COMPATIBILITY_MODE_REQUEST`, and when it finds no
+   field. The service declares no compatibility packages.
 2. It records the page, as the next sections define it, and the fillable field IDs in an in-process
    registry under a random single-use token that expires after 5 minutes. It answers with one
    `Dataset` whose values are all `null`, authenticated by an `IntentSender` to the picker activity.
@@ -325,8 +329,9 @@ starts the save activity through `SaveCallback.onSuccess(IntentSender)`, whose i
 a token; no submitted value passes through `system_server` in an extra. `vault_client::autofill`
 decides the offer as on Firefox, and nothing is saved without the user's confirmation. A new item
 for an app is named by its package, not its label, and records a bound association, or an unbound
-one for an app with more than one signer. A new item for an Android web page records its scheme
-and host with `base_domain`. A save request that arrives while the vault is locked is dropped.
+one for an app with more than one signer or with signing information that could not be read. A new
+item for an Android web page records its scheme and host with `base_domain`. A save request that
+arrives while the vault is locked is dropped.
 
 ## Setup
 
@@ -393,18 +398,21 @@ third-party plugin.
 
 | Command | Purpose |
 | --- | --- |
-| `./gradlew assembleRelease` in `android/` | The library, the bindings, and a signed APK |
+| `./gradlew assembleRelease` in `android/` | The library, the bindings, and the APK, signed when the `vault.signing.storeFile`, `vault.signing.storePassword`, `vault.signing.keyAlias`, and `vault.signing.keyPassword` properties are set |
 | `./gradlew lint test` in `android/` | Lint and JVM unit tests, including the spec vectors through the generated Kotlin |
-| `./gradlew connectedCheck` in `android/` | Instrumented tests on an emulator against a real `vault serve` |
+| `android/e2e/run.sh` | The instrumented end-to-end steps on an emulator against a real `vault serve` and the CLI; needs `ANDROID_HOME`, `JAVA_HOME`, and an emulator with the PIN 1234 and fingerprint 1 enrolled |
+| `./gradlew connectedAndroidTest -Pvault.testBuildType=release -Pandroid.testInstrumentationRunnerArguments.class=com.codeheadsystems.vault.ReleaseGateTest` in `android/` | The release gate against the release APK |
 | `cargo test -p vault-android` | The Rust side of the bindings and the Public Suffix List |
 
-`./gradlew test` builds `vault-android` for the host and runs the spec vectors through the generated
-Kotlin and JNA, as the Node run does for WASM. The instrumented tests cover setup, unlock,
-biometric unlock and invalidation (on the emulator's fingerprint), the idle lock after a freeze,
-sync in both directions with the CLI, a credential change on either side, recovery, restore, the
-pin and cleartext refusals, app and web fills through the autofill framework, a forged picker
-intent, save offers, and the clipboard clear. The release gate runs against the library inside the
-release APK.
+The Kotlin bindings are generated from an unstripped host build, because the `android` profile
+strips UniFFI's metadata. `./gradlew test` builds `vault-android` for the host and runs the spec
+vectors through the generated Kotlin and JNA, as the Node run does for WASM. The end-to-end steps
+need the driver's work on the host between them, such as CLI commands and fingerprint touches, so a
+bare `connectedCheck` is not the entry point. The instrumented tests cover setup, unlock, biometric
+unlock and invalidation (on the emulator's fingerprint), the idle lock after a freeze, sync in both
+directions with the CLI, a credential change on either side, recovery, restore, the pin and
+cleartext refusals, app and web fills through the autofill framework, a forged picker intent, save
+offers, and the clipboard clear. The release gate runs against the library inside the release APK.
 
 CI gains a manual `android` job: the runner's SDK with a pinned NDK r28, `cargo-ndk` installed
 with `--locked`, and an unsigned `./gradlew assembleRelease lint test` with dependency verification.
@@ -425,3 +433,4 @@ in matching.
 | Argon2id floor time on a real arm64 phone | The Unlock row of the requirements |
 | What a current Chrome reports for a cross-origin frame (the emulator's Chrome 133 could not be updated) | Web matching; a frame-aware structure allows the Firefox rule for Chrome too |
 | Chrome on a real phone: the "Autofill using another service" setting and the certificate digest | The allowlist and setup |
+| The setup, unlock, item, credential, restore, and key screens, by hand; they have no automated UI tests, and the end-to-end run drives the same flows below the UI | AND-1, AND-2, AND-5, and AND-8 |

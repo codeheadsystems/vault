@@ -525,6 +525,14 @@ fn init_then_setup_on_a_second_device_and_an_edit_syncs_across() {
     let setup_b = server.token("phone");
     let r = b.setup(&setup_b, &sk).ok();
     assert!(r.stderr.contains("set up"), "{r:#?}");
+    // Setup's first write: the device ID and server.json, then the key, then the state.
+    for f in ["local.json", "server.json", "device-id", "secret-key"] {
+        let mode = std::fs::metadata(b.data().join(f))
+            .unwrap_or_else(|e| panic!("{f}: {e}"))
+            .permissions()
+            .mode();
+        assert_eq!(mode & 0o777, 0o600, "{f}");
+    }
     assert_eq!(b.names(PW), ["GitHub"]);
     let item = b.show("github", PW);
     assert_eq!(password_of(&item), "hunter2-long");

@@ -397,9 +397,9 @@
    "url": "https://upper.example.com/"
   },
   {
-   "name": "registrable: home.arpa under the arpa suffix",
+   "name": "registrable: a host under the home.arpa suffix",
    "op": "registrable",
-   "result": "home.arpa",
+   "result": "router.home.arpa",
    "url": "http://router.home.arpa/"
   },
   {
@@ -609,6 +609,14 @@
    "page": "http://home.arpa/",
    "result": "confirm",
    "uri": "https://home.arpa"
+  },
+  {
+   "match": "base_domain",
+   "name": "base_domain: two hosts under home.arpa have different registrable domains",
+   "op": "match",
+   "page": "https://printer.home.arpa/",
+   "result": "none",
+   "uri": "https://nas.home.arpa"
   },
   {
    "match": "base_domain",
@@ -2742,9 +2750,3681 @@
     4
    ],
    "top": "https://bank.com/login"
+  },
+  {
+   "host": "bank.com",
+   "name": "android_page: https and a domain",
+   "op": "android_page",
+   "result": {
+    "host": "bank.com",
+    "origin": "https://bank.com",
+    "path_query": "/",
+    "port": null,
+    "scheme": "https"
+   },
+   "scheme": "https"
+  },
+  {
+   "host": "nas.lan",
+   "name": "android_page: http and a local name",
+   "op": "android_page",
+   "result": {
+    "host": "nas.lan",
+    "origin": "http://nas.lan",
+    "path_query": "/",
+    "port": null,
+    "scheme": "http"
+   },
+   "scheme": "http"
+  },
+  {
+   "host": "192.168.1.10",
+   "name": "android_page: http and a private address",
+   "op": "android_page",
+   "result": {
+    "host": "192.168.1.10",
+    "origin": "http://192.168.1.10",
+    "path_query": "/",
+    "port": null,
+    "scheme": "http"
+   },
+   "scheme": "http"
+  },
+  {
+   "host": "BANK.com.",
+   "name": "android_page: upper case host and a trailing dot",
+   "op": "android_page",
+   "result": {
+    "host": "bank.com",
+    "origin": "https://bank.com",
+    "path_query": "/",
+    "port": null,
+    "scheme": "https"
+   },
+   "scheme": "https"
+  },
+  {
+   "host": "bank.com:443",
+   "name": "android_page: a default port is still a port",
+   "op": "android_page",
+   "result": null,
+   "scheme": "https"
+  },
+  {
+   "host": "[::1]",
+   "name": "android_page: a bracketed IPv6 address",
+   "op": "android_page",
+   "result": {
+    "host": "[::1]",
+    "origin": "http://[::1]",
+    "path_query": "/",
+    "port": null,
+    "scheme": "http"
+   },
+   "scheme": "http"
+  },
+  {
+   "host": "[fe80:0:0:0:0:0:0:1]",
+   "name": "android_page: a bracketed IPv6 address, compressed",
+   "op": "android_page",
+   "result": {
+    "host": "[fe80::1]",
+    "origin": "https://[fe80::1]",
+    "path_query": "/",
+    "port": null,
+    "scheme": "https"
+   },
+   "scheme": "https"
+  },
+  {
+   "host": "[::1]:8443",
+   "name": "android_page: an IPv6 address with a port",
+   "op": "android_page",
+   "result": null,
+   "scheme": "http"
+  },
+  {
+   "host": "::1",
+   "name": "android_page: an IPv6 address without brackets",
+   "op": "android_page",
+   "result": null,
+   "scheme": "http"
+  },
+  {
+   "host": "bücher.de",
+   "name": "android_page: an internationalised host",
+   "op": "android_page",
+   "result": {
+    "host": "xn--bcher-kva.de",
+    "origin": "https://xn--bcher-kva.de",
+    "path_query": "/",
+    "port": null,
+    "scheme": "https"
+   },
+   "scheme": "https"
+  },
+  {
+   "host": "10.0.0.1",
+   "name": "android_page: a bare IPv4 address",
+   "op": "android_page",
+   "result": {
+    "host": "10.0.0.1",
+    "origin": "http://10.0.0.1",
+    "path_query": "/",
+    "port": null,
+    "scheme": "http"
+   },
+   "scheme": "http"
+  },
+  {
+   "host": "0x7f.1",
+   "name": "android_page: an IPv4 shorthand",
+   "op": "android_page",
+   "result": {
+    "host": "127.0.0.1",
+    "origin": "http://127.0.0.1",
+    "path_query": "/",
+    "port": null,
+    "scheme": "http"
+   },
+   "scheme": "http"
+  },
+  {
+   "host": "/example.com",
+   "name": "android_page: a leading slash",
+   "op": "android_page",
+   "result": null,
+   "scheme": "https"
+  },
+  {
+   "host": "\\example.com",
+   "name": "android_page: a leading backslash",
+   "op": "android_page",
+   "result": null,
+   "scheme": "https"
+  },
+  {
+   "host": "@a.com",
+   "name": "android_page: a leading at sign",
+   "op": "android_page",
+   "result": null,
+   "scheme": "https"
+  },
+  {
+   "host": "example.com:",
+   "name": "android_page: a trailing colon",
+   "op": "android_page",
+   "result": null,
+   "scheme": "https"
+  },
+  {
+   "host": "a.com\t",
+   "name": "android_page: a trailing tab",
+   "op": "android_page",
+   "result": null,
+   "scheme": "https"
+  },
+  {
+   "host": "exa\nmple.com",
+   "name": "android_page: a newline inside",
+   "op": "android_page",
+   "result": null,
+   "scheme": "https"
+  },
+  {
+   "host": "exa mple.com",
+   "name": "android_page: a space inside",
+   "op": "android_page",
+   "result": null,
+   "scheme": "https"
+  },
+  {
+   "host": "example.com",
+   "name": "android_page: a DEL inside",
+   "op": "android_page",
+   "result": null,
+   "scheme": "https"
+  },
+  {
+   "host": "example.com",
+   "name": "android_page: a C1 control inside",
+   "op": "android_page",
+   "result": null,
+   "scheme": "https"
+  },
+  {
+   "host": "bank.com",
+   "name": "android_page: no scheme",
+   "op": "android_page",
+   "result": null,
+   "scheme": ""
+  },
+  {
+   "host": "bank.com",
+   "name": "android_page: ftp scheme",
+   "op": "android_page",
+   "result": null,
+   "scheme": "ftp"
+  },
+  {
+   "host": "bank.com",
+   "name": "android_page: upper case scheme is not http or https",
+   "op": "android_page",
+   "result": null,
+   "scheme": "HTTPS"
+  },
+  {
+   "host": "bank.com:8443",
+   "name": "android_page: a port",
+   "op": "android_page",
+   "result": null,
+   "scheme": "https"
+  },
+  {
+   "host": "bank.com/login",
+   "name": "android_page: a path",
+   "op": "android_page",
+   "result": null,
+   "scheme": "https"
+  },
+  {
+   "host": "bank.com?x=1",
+   "name": "android_page: a query",
+   "op": "android_page",
+   "result": null,
+   "scheme": "https"
+  },
+  {
+   "host": "bank.com#top",
+   "name": "android_page: a fragment",
+   "op": "android_page",
+   "result": null,
+   "scheme": "https"
+  },
+  {
+   "host": "ned@bank.com",
+   "name": "android_page: user information",
+   "op": "android_page",
+   "result": null,
+   "scheme": "https"
+  },
+  {
+   "host": "",
+   "name": "android_page: an empty host",
+   "op": "android_page",
+   "result": null,
+   "scheme": "https"
+  },
+  {
+   "host": "a..bank.com",
+   "name": "android_page: an empty label",
+   "op": "android_page",
+   "result": null,
+   "scheme": "https"
+  },
+  {
+   "host": "bank.com",
+   "match": "base_domain",
+   "name": "android_match: base_domain, same host",
+   "op": "android_match",
+   "result": "fill",
+   "scheme": "https",
+   "uri": "bank.com"
+  },
+  {
+   "host": "www.bank.com",
+   "match": "base_domain",
+   "name": "android_match: base_domain, other subdomain",
+   "op": "android_match",
+   "result": "fill",
+   "scheme": "https",
+   "uri": "login.bank.com"
+  },
+  {
+   "host": "bank.com",
+   "match": "base_domain",
+   "name": "android_match: base_domain, item port ignored",
+   "op": "android_match",
+   "result": "fill",
+   "scheme": "https",
+   "uri": "https://bank.com:8443/x"
+  },
+  {
+   "host": "evil.com",
+   "match": "base_domain",
+   "name": "android_match: base_domain, other site",
+   "op": "android_match",
+   "result": "none",
+   "scheme": "https",
+   "uri": "bank.com"
+  },
+  {
+   "host": "bank.com.evil.com",
+   "match": "base_domain",
+   "name": "android_match: base_domain, lookalike",
+   "op": "android_match",
+   "result": "none",
+   "scheme": "https",
+   "uri": "bank.com"
+  },
+  {
+   "host": "bank.com",
+   "match": "base_domain",
+   "name": "android_match: base_domain, https item on an http page",
+   "op": "android_match",
+   "result": "none",
+   "scheme": "http",
+   "uri": "https://bank.com"
+  },
+  {
+   "host": "nas.lan",
+   "match": "base_domain",
+   "name": "android_match: base_domain, https item on an http local host",
+   "op": "android_match",
+   "result": "confirm",
+   "scheme": "http",
+   "uri": "nas.lan"
+  },
+  {
+   "host": "bank.com",
+   "match": "base_domain",
+   "name": "android_match: base_domain, http item on an https page",
+   "op": "android_match",
+   "result": "fill",
+   "scheme": "https",
+   "uri": "http://bank.com"
+  },
+  {
+   "host": "bank.com",
+   "match": "host",
+   "name": "android_match: host, equal hosts",
+   "op": "android_match",
+   "result": "fill",
+   "scheme": "https",
+   "uri": "bank.com"
+  },
+  {
+   "host": "bank.com",
+   "match": "host",
+   "name": "android_match: host, the item names a port",
+   "op": "android_match",
+   "result": "confirm",
+   "scheme": "https",
+   "uri": "bank.com:8443"
+  },
+  {
+   "host": "bank.com",
+   "match": "host",
+   "name": "android_match: host, the item names the default port",
+   "op": "android_match",
+   "result": "fill",
+   "scheme": "https",
+   "uri": "https://bank.com:443/x"
+  },
+  {
+   "host": "www.bank.com",
+   "match": "host",
+   "name": "android_match: host, other host",
+   "op": "android_match",
+   "result": "none",
+   "scheme": "https",
+   "uri": "bank.com"
+  },
+  {
+   "host": "nas.lan",
+   "match": "host",
+   "name": "android_match: host, local name",
+   "op": "android_match",
+   "result": "confirm",
+   "scheme": "https",
+   "uri": "nas.lan"
+  },
+  {
+   "host": "192.168.1.10",
+   "match": "host",
+   "name": "android_match: host, local address over http",
+   "op": "android_match",
+   "result": "confirm",
+   "scheme": "http",
+   "uri": "http://192.168.1.10"
+  },
+  {
+   "host": "printer.home.arpa",
+   "match": "host",
+   "name": "android_match: host, home.arpa",
+   "op": "android_match",
+   "result": "confirm",
+   "scheme": "https",
+   "uri": "printer.home.arpa"
+  },
+  {
+   "host": "nas.lan",
+   "match": "host",
+   "name": "android_match: host, https item on an http local host",
+   "op": "android_match",
+   "result": "confirm",
+   "scheme": "http",
+   "uri": "https://nas.lan"
+  },
+  {
+   "host": "bank.com",
+   "match": "host",
+   "name": "android_match: host, https item on an http page",
+   "op": "android_match",
+   "result": "none",
+   "scheme": "http",
+   "uri": "https://bank.com"
+  },
+  {
+   "host": "bank.com",
+   "match": "host",
+   "name": "android_match: host, http item on an http page",
+   "op": "android_match",
+   "result": "fill",
+   "scheme": "http",
+   "uri": "http://bank.com"
+  },
+  {
+   "host": "bank.com",
+   "match": "starts_with",
+   "name": "android_match: starts_with, same scheme and host",
+   "op": "android_match",
+   "result": "confirm",
+   "scheme": "https",
+   "uri": "https://bank.com/login"
+  },
+  {
+   "host": "bank.com",
+   "match": "starts_with",
+   "name": "android_match: starts_with, item port ignored",
+   "op": "android_match",
+   "result": "confirm",
+   "scheme": "https",
+   "uri": "https://bank.com:8443/a"
+  },
+  {
+   "host": "bank.com",
+   "match": "starts_with",
+   "name": "android_match: starts_with, other scheme",
+   "op": "android_match",
+   "result": "none",
+   "scheme": "http",
+   "uri": "https://bank.com/login"
+  },
+  {
+   "host": "bank.com",
+   "match": "starts_with",
+   "name": "android_match: starts_with, other host",
+   "op": "android_match",
+   "result": "none",
+   "scheme": "https",
+   "uri": "https://www.bank.com/"
+  },
+  {
+   "host": "bank.com",
+   "match": "starts_with",
+   "name": "android_match: starts_with, http item on an https page",
+   "op": "android_match",
+   "result": "none",
+   "scheme": "https",
+   "uri": "http://bank.com/login"
+  },
+  {
+   "host": "bank.com",
+   "match": "exact",
+   "name": "android_match: exact, http item on an https page",
+   "op": "android_match",
+   "result": "none",
+   "scheme": "https",
+   "uri": "http://bank.com/"
+  },
+  {
+   "host": "bank.com",
+   "match": "exact",
+   "name": "android_match: exact, same scheme and host",
+   "op": "android_match",
+   "result": "confirm",
+   "scheme": "https",
+   "uri": "https://bank.com/login?x=1"
+  },
+  {
+   "host": "bank.com",
+   "match": "exact",
+   "name": "android_match: exact, other host",
+   "op": "android_match",
+   "result": "none",
+   "scheme": "https",
+   "uri": "https://www.bank.com/"
+  },
+  {
+   "host": "nas.lan",
+   "match": "exact",
+   "name": "android_match: exact, http on a local host",
+   "op": "android_match",
+   "result": "confirm",
+   "scheme": "http",
+   "uri": "http://nas.lan/admin"
+  },
+  {
+   "host": "bank.com",
+   "match": "never",
+   "name": "android_match: never",
+   "op": "android_match",
+   "result": "none",
+   "scheme": "https",
+   "uri": "bank.com"
+  },
+  {
+   "host": "bank.com",
+   "match": "regex",
+   "name": "android_match: an unknown mode",
+   "op": "android_match",
+   "result": "none",
+   "scheme": "https",
+   "uri": "bank.com"
+  },
+  {
+   "host": "tricky.example.com",
+   "match": "base_domain",
+   "name": "android_match: a failed known-suffix answer",
+   "op": "android_match",
+   "result": "none",
+   "scheme": "https",
+   "uri": "tricky.example.com"
+  },
+  {
+   "host": "tricky.example.com",
+   "match": "host",
+   "name": "android_match: a failed known-suffix answer under host",
+   "op": "android_match",
+   "result": "none",
+   "scheme": "https",
+   "uri": "tricky.example.com"
+  },
+  {
+   "host": "bank.com",
+   "match": "base_domain",
+   "name": "android_match: an androidapp URI",
+   "op": "android_match",
+   "result": "none",
+   "scheme": "https",
+   "uri": "androidapp://com.bank"
+  },
+  {
+   "host": "bank.com",
+   "match": "base_domain",
+   "name": "android_match: an item URI that does not parse",
+   "op": "android_match",
+   "result": "none",
+   "scheme": "https",
+   "uri": "https://ba nk.com/"
+  },
+  {
+   "host": "bank.com",
+   "match": "base_domain",
+   "name": "android_match: an item URI with user information",
+   "op": "android_match",
+   "result": "none",
+   "scheme": "https",
+   "uri": "https://ned@bank.com/"
+  },
+  {
+   "host": "bank.com",
+   "match": "host",
+   "name": "android_match: a scheme-less item URI on an http page",
+   "op": "android_match",
+   "result": "none",
+   "scheme": "http",
+   "uri": "bank.com"
+  },
+  {
+   "host": "nas.lan",
+   "match": "host",
+   "name": "android_match: a scheme-less item URI on an http local host",
+   "op": "android_match",
+   "result": "confirm",
+   "scheme": "http",
+   "uri": "nas.lan:8080"
+  },
+  {
+   "host": "bank.com",
+   "match": "base_domain",
+   "name": "android_match: not an Android web page",
+   "op": "android_match",
+   "result": "none",
+   "scheme": "ftp",
+   "uri": "bank.com"
+  },
+  {
+   "host": "bank.com",
+   "items": [
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Zeta",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Alpha",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "exact",
+       "uri": "https://bank.com/login"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Beta",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "host",
+       "uri": "bank.com:8443"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000004",
+     "name": "Gamma",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000005",
+     "name": "Bank note",
+     "type": "note"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000006",
+     "name": "Delta",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "evil.com"
+      }
+     ],
+     "username": "ned"
+    }
+   ],
+   "name": "android_items: fill first, then confirm by name",
+   "op": "android_items",
+   "result": [
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "outcome": "fill"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000002",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000003",
+     "outcome": "confirm"
+    }
+   ],
+   "scheme": "https"
+  },
+  {
+   "host": "bank.com",
+   "items": [
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000008",
+     "name": "Same",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000007",
+     "name": "Same",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "host",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    }
+   ],
+   "name": "android_items: a name tie is broken by id",
+   "op": "android_items",
+   "result": [
+    {
+     "id": "00000000-0000-4000-8000-000000000007",
+     "outcome": "fill"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000008",
+     "outcome": "fill"
+    }
+   ],
+   "scheme": "https"
+  },
+  {
+   "host": "bank.com",
+   "items": [
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Zeta",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Alpha",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "exact",
+       "uri": "https://bank.com/login"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Beta",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "host",
+       "uri": "bank.com:8443"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000004",
+     "name": "Gamma",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000005",
+     "name": "Bank note",
+     "type": "note"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000006",
+     "name": "Delta",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "evil.com"
+      }
+     ],
+     "username": "ned"
+    }
+   ],
+   "name": "android_items: an http page that is not a local host",
+   "op": "android_items",
+   "result": [],
+   "scheme": "http"
+  },
+  {
+   "host": "bank.com",
+   "items": [
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Zeta",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Alpha",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "exact",
+       "uri": "https://bank.com/login"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Beta",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "host",
+       "uri": "bank.com:8443"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000004",
+     "name": "Gamma",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000005",
+     "name": "Bank note",
+     "type": "note"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000006",
+     "name": "Delta",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "evil.com"
+      }
+     ],
+     "username": "ned"
+    }
+   ],
+   "name": "android_items: not an Android web page",
+   "op": "android_items",
+   "result": [],
+   "scheme": ""
+  },
+  {
+   "host": "bank.com",
+   "items": [
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bank",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Bank port",
+     "password": "p9",
+     "type": "login",
+     "uris": [
+      {
+       "match": "host",
+       "uri": "bank.com:8443"
+      }
+     ],
+     "username": "alice"
+    }
+   ],
+   "name": "android_save: already stored",
+   "op": "android_save",
+   "password": "p1",
+   "result": {
+    "action": "none"
+   },
+   "scheme": "https",
+   "username": "ned"
+  },
+  {
+   "host": "bank.com",
+   "items": [
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bank",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Bank port",
+     "password": "p9",
+     "type": "login",
+     "uris": [
+      {
+       "match": "host",
+       "uri": "bank.com:8443"
+      }
+     ],
+     "username": "alice"
+    }
+   ],
+   "name": "android_save: a new password",
+   "op": "android_save",
+   "password": "p2",
+   "result": {
+    "action": "update",
+    "id": "00000000-0000-4000-8000-000000000001"
+   },
+   "scheme": "https",
+   "username": "ned"
+  },
+  {
+   "host": "bank.com",
+   "items": [
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bank",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Bank port",
+     "password": "p9",
+     "type": "login",
+     "uris": [
+      {
+       "match": "host",
+       "uri": "bank.com:8443"
+      }
+     ],
+     "username": "alice"
+    }
+   ],
+   "name": "android_save: a confirm match is not considered",
+   "op": "android_save",
+   "password": "p2",
+   "result": {
+    "action": "new",
+    "apps": [],
+    "name": "bank.com",
+    "uris": [
+     {
+      "match": "base_domain",
+      "uri": "https://bank.com"
+     }
+    ]
+   },
+   "scheme": "https",
+   "username": "alice"
+  },
+  {
+   "host": "shop.de",
+   "items": [
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bank",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Bank port",
+     "password": "p9",
+     "type": "login",
+     "uris": [
+      {
+       "match": "host",
+       "uri": "bank.com:8443"
+      }
+     ],
+     "username": "alice"
+    }
+   ],
+   "name": "android_save: a new site",
+   "op": "android_save",
+   "password": "p1",
+   "result": {
+    "action": "new",
+    "apps": [],
+    "name": "shop.de",
+    "uris": [
+     {
+      "match": "base_domain",
+      "uri": "https://shop.de"
+     }
+    ]
+   },
+   "scheme": "https",
+   "username": "ned"
+  },
+  {
+   "host": "nas.lan",
+   "items": [],
+   "name": "android_save: a local host over http",
+   "op": "android_save",
+   "password": "x",
+   "result": {
+    "action": "new",
+    "apps": [],
+    "name": "nas.lan",
+    "uris": [
+     {
+      "match": "base_domain",
+      "uri": "http://nas.lan"
+     }
+    ]
+   },
+   "scheme": "http",
+   "username": "admin"
+  },
+  {
+   "host": "bank.com",
+   "items": [
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bank",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Bank port",
+     "password": "p9",
+     "type": "login",
+     "uris": [
+      {
+       "match": "host",
+       "uri": "bank.com:8443"
+      }
+     ],
+     "username": "alice"
+    }
+   ],
+   "name": "android_save: an empty password",
+   "op": "android_save",
+   "password": "",
+   "result": {
+    "action": "none"
+   },
+   "scheme": "https",
+   "username": "ned"
+  },
+  {
+   "host": "bank.com",
+   "items": [
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Zed",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Alpha",
+     "password": "p2",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Alpha",
+     "password": "p4",
+     "type": "login",
+     "uris": [
+      {
+       "match": "host",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    }
+   ],
+   "name": "android_save: the first of several same-username fills is updated",
+   "op": "android_save",
+   "password": "p3",
+   "result": {
+    "action": "update",
+    "id": "00000000-0000-4000-8000-000000000002"
+   },
+   "scheme": "https",
+   "username": "ned"
+  },
+  {
+   "host": "bank.com:8443",
+   "items": [
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bank",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Bank port",
+     "password": "p9",
+     "type": "login",
+     "uris": [
+      {
+       "match": "host",
+       "uri": "bank.com:8443"
+      }
+     ],
+     "username": "alice"
+    }
+   ],
+   "name": "android_save: not an Android web page",
+   "op": "android_save",
+   "password": "p2",
+   "result": {
+    "action": "none"
+   },
+   "scheme": "https",
+   "username": "ned"
+  },
+  {
+   "app": {
+    "history": [
+     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "multiple_signers": false,
+    "package": "com.bank",
+    "signers": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ]
+   },
+   "items": [
+    {
+     "apps": [
+      {
+       "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bound current",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Bound rotated",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Bound changed",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000004",
+     "name": "Unbound",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000005",
+     "name": "Unbound spaced",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "host",
+       "uri": "  ANDROIDAPP://com.bank \n"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000006",
+     "name": "Package case",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "androidapp://com.Bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000007",
+     "name": "Trailing slash",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "androidapp://com.bank/"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000008",
+     "name": "Never",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "never",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000009",
+     "name": "Unknown mode",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "regex",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "package": "com.other"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000010",
+     "name": "Other package",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000011",
+     "name": "Changed and unbound",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+       "package": "com.bank"
+      },
+      {
+       "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000012",
+     "name": "Rotated and changed",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000013",
+     "name": "A note",
+     "type": "note"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000014",
+     "name": "Web only",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000015",
+     "name": "Aardvark unbound",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "starts_with",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    }
+   ],
+   "name": "app_items: one signer: every kind, fill first, then by name",
+   "op": "app_items",
+   "result": [
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "kind": "fill",
+     "outcome": "fill"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000015",
+     "kind": "bind",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000003",
+     "kind": "signature_changed",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000002",
+     "kind": "rebind",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000011",
+     "kind": "signature_changed",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000012",
+     "kind": "rebind",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000004",
+     "kind": "bind",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000005",
+     "kind": "bind",
+     "outcome": "confirm"
+    }
+   ]
+  },
+  {
+   "app": {
+    "history": [],
+    "multiple_signers": true,
+    "package": "com.bank",
+    "signers": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    ]
+   },
+   "items": [
+    {
+     "apps": [
+      {
+       "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bound current",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Bound rotated",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Bound changed",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000004",
+     "name": "Unbound",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000005",
+     "name": "Unbound spaced",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "host",
+       "uri": "  ANDROIDAPP://com.bank \n"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000006",
+     "name": "Package case",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "androidapp://com.Bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000007",
+     "name": "Trailing slash",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "androidapp://com.bank/"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000008",
+     "name": "Never",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "never",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000009",
+     "name": "Unknown mode",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "regex",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "package": "com.other"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000010",
+     "name": "Other package",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000011",
+     "name": "Changed and unbound",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+       "package": "com.bank"
+      },
+      {
+       "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000012",
+     "name": "Rotated and changed",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000013",
+     "name": "A note",
+     "type": "note"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000014",
+     "name": "Web only",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000015",
+     "name": "Aardvark unbound",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "starts_with",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    }
+   ],
+   "name": "app_items: more than one signer: unverified, nothing binds",
+   "op": "app_items",
+   "result": [
+    {
+     "id": "00000000-0000-4000-8000-000000000015",
+     "kind": "unverified",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000003",
+     "kind": "unverified",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "kind": "unverified",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000002",
+     "kind": "unverified",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000011",
+     "kind": "unverified",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000012",
+     "kind": "unverified",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000004",
+     "kind": "unverified",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000005",
+     "kind": "unverified",
+     "outcome": "confirm"
+    }
+   ]
+  },
+  {
+   "app": {
+    "history": [],
+    "multiple_signers": false,
+    "package": "com.bank",
+    "signers": []
+   },
+   "items": [
+    {
+     "apps": [
+      {
+       "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bound current",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Bound rotated",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Bound changed",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000004",
+     "name": "Unbound",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000005",
+     "name": "Unbound spaced",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "host",
+       "uri": "  ANDROIDAPP://com.bank \n"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000006",
+     "name": "Package case",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "androidapp://com.Bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000007",
+     "name": "Trailing slash",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "androidapp://com.bank/"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000008",
+     "name": "Never",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "never",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000009",
+     "name": "Unknown mode",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "regex",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "package": "com.other"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000010",
+     "name": "Other package",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000011",
+     "name": "Changed and unbound",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+       "package": "com.bank"
+      },
+      {
+       "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000012",
+     "name": "Rotated and changed",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000013",
+     "name": "A note",
+     "type": "note"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000014",
+     "name": "Web only",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000015",
+     "name": "Aardvark unbound",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "starts_with",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    }
+   ],
+   "name": "app_items: signing information not read: unverified",
+   "op": "app_items",
+   "result": [
+    {
+     "id": "00000000-0000-4000-8000-000000000015",
+     "kind": "unverified",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000003",
+     "kind": "unverified",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "kind": "unverified",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000002",
+     "kind": "unverified",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000011",
+     "kind": "unverified",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000012",
+     "kind": "unverified",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000004",
+     "kind": "unverified",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000005",
+     "kind": "unverified",
+     "outcome": "confirm"
+    }
+   ]
+  },
+  {
+   "app": {
+    "history": [],
+    "multiple_signers": true,
+    "package": "com.bank",
+    "signers": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ]
+   },
+   "items": [
+    {
+     "apps": [
+      {
+       "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bound current",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Bound rotated",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Bound changed",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000004",
+     "name": "Unbound",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000005",
+     "name": "Unbound spaced",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "host",
+       "uri": "  ANDROIDAPP://com.bank \n"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000006",
+     "name": "Package case",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "androidapp://com.Bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000007",
+     "name": "Trailing slash",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "androidapp://com.bank/"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000008",
+     "name": "Never",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "never",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000009",
+     "name": "Unknown mode",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "regex",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "package": "com.other"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000010",
+     "name": "Other package",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000011",
+     "name": "Changed and unbound",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+       "package": "com.bank"
+      },
+      {
+       "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000012",
+     "name": "Rotated and changed",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000013",
+     "name": "A note",
+     "type": "note"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000014",
+     "name": "Web only",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000015",
+     "name": "Aardvark unbound",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "starts_with",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    }
+   ],
+   "name": "app_items: one signer flagged as several: unverified",
+   "op": "app_items",
+   "result": [
+    {
+     "id": "00000000-0000-4000-8000-000000000015",
+     "kind": "unverified",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000003",
+     "kind": "unverified",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000001",
+     "kind": "unverified",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000002",
+     "kind": "unverified",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000011",
+     "kind": "unverified",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000012",
+     "kind": "unverified",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000004",
+     "kind": "unverified",
+     "outcome": "confirm"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000005",
+     "kind": "unverified",
+     "outcome": "confirm"
+    }
+   ]
+  },
+  {
+   "app": {
+    "history": [
+     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "multiple_signers": false,
+    "package": "com.bank",
+    "signers": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ]
+   },
+   "items": [
+    {
+     "apps": [
+      {
+       "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000031",
+     "name": "Same",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000030",
+     "name": "Same",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    }
+   ],
+   "name": "app_items: a name tie is broken by id",
+   "op": "app_items",
+   "result": [
+    {
+     "id": "00000000-0000-4000-8000-000000000030",
+     "kind": "fill",
+     "outcome": "fill"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000031",
+     "kind": "fill",
+     "outcome": "fill"
+    }
+   ]
+  },
+  {
+   "app": {
+    "history": [
+     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "multiple_signers": false,
+    "package": "com.unknown",
+    "signers": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ]
+   },
+   "items": [
+    {
+     "apps": [
+      {
+       "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bound current",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Bound rotated",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Bound changed",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000004",
+     "name": "Unbound",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000005",
+     "name": "Unbound spaced",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "host",
+       "uri": "  ANDROIDAPP://com.bank \n"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000006",
+     "name": "Package case",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "androidapp://com.Bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000007",
+     "name": "Trailing slash",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "androidapp://com.bank/"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000008",
+     "name": "Never",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "never",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000009",
+     "name": "Unknown mode",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "regex",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "package": "com.other"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000010",
+     "name": "Other package",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000011",
+     "name": "Changed and unbound",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+       "package": "com.bank"
+      },
+      {
+       "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000012",
+     "name": "Rotated and changed",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "id": "00000000-0000-4000-8000-000000000013",
+     "name": "A note",
+     "type": "note"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000014",
+     "name": "Web only",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "ned"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000015",
+     "name": "Aardvark unbound",
+     "password": "p1",
+     "type": "login",
+     "uris": [
+      {
+       "match": "starts_with",
+       "uri": "androidapp://com.bank"
+      }
+     ],
+     "username": "ned"
+    }
+   ],
+   "name": "app_items: another package has no candidates",
+   "op": "app_items",
+   "result": []
+  },
+  {
+   "app": {
+    "history": [
+     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "multiple_signers": false,
+    "package": "com.bank",
+    "signers": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ]
+   },
+   "item": {
+    "apps": [],
+    "id": "00000000-0000-4000-8000-000000000004",
+    "name": "Unbound",
+    "password": "p1",
+    "type": "login",
+    "uris": [
+     {
+      "match": "base_domain",
+      "uri": "androidapp://com.bank"
+     }
+    ],
+    "username": "ned"
+   },
+   "name": "app_bind: bind adds the current certificate",
+   "op": "app_bind",
+   "result": [
+    {
+     "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "package": "com.bank"
+    }
+   ]
+  },
+  {
+   "app": {
+    "history": [
+     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "multiple_signers": false,
+    "package": "com.bank",
+    "signers": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ]
+   },
+   "item": {
+    "apps": [
+     {
+      "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "package": "com.bank"
+     }
+    ],
+    "id": "00000000-0000-4000-8000-000000000002",
+    "name": "Bound rotated",
+    "password": "p1",
+    "type": "login",
+    "uris": [],
+    "username": "ned"
+   },
+   "name": "app_bind: rebind moves a rotated certificate",
+   "op": "app_bind",
+   "result": [
+    {
+     "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "package": "com.bank"
+    }
+   ]
+  },
+  {
+   "app": {
+    "history": [
+     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "multiple_signers": false,
+    "package": "com.bank",
+    "signers": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ]
+   },
+   "item": {
+    "apps": [
+     {
+      "cert_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "package": "com.bank"
+     },
+     {
+      "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "package": "com.bank"
+     }
+    ],
+    "id": "00000000-0000-4000-8000-000000000012",
+    "name": "Rotated and changed",
+    "password": "p1",
+    "type": "login",
+    "uris": [],
+    "username": "ned"
+   },
+   "name": "app_bind: rebind keeps an entry outside the history",
+   "op": "app_bind",
+   "result": [
+    {
+     "cert_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+     "package": "com.bank"
+    },
+    {
+     "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "package": "com.bank"
+    }
+   ]
+  },
+  {
+   "app": {
+    "history": [
+     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+     "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "multiple_signers": false,
+    "package": "com.bank",
+    "signers": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ]
+   },
+   "item": {
+    "apps": [
+     {
+      "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "package": "com.bank"
+     },
+     {
+      "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "package": "com.other"
+     },
+     {
+      "cert_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "package": "com.bank"
+     }
+    ],
+    "id": "00000000-0000-4000-8000-000000000020",
+    "name": "Two rotations",
+    "password": "p1",
+    "type": "login",
+    "uris": [],
+    "username": "ned"
+   },
+   "name": "app_bind: rebind keeps the first of entries that became equal",
+   "op": "app_bind",
+   "result": [
+    {
+     "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "package": "com.bank"
+    },
+    {
+     "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+     "package": "com.other"
+    }
+   ]
+  },
+  {
+   "app": {
+    "history": [
+     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+     "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "multiple_signers": false,
+    "package": "com.bank",
+    "signers": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ]
+   },
+   "item": {
+    "apps": [
+     {
+      "cert_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "package": "com.bank"
+     },
+     {
+      "cert_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "package": "com.bank"
+     },
+     {
+      "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "package": "com.bank"
+     },
+     {
+      "cert_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "package": "com.other"
+     },
+     {
+      "cert_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "package": "com.other"
+     },
+     {
+      "cert_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "package": "com.bank"
+     }
+    ],
+    "id": "00000000-0000-4000-8000-000000000021",
+    "name": "Duplicates",
+    "password": "p1",
+    "type": "login",
+    "uris": [],
+    "username": "ned"
+   },
+   "name": "app_bind: rebind leaves duplicates it did not create",
+   "op": "app_bind",
+   "result": [
+    {
+     "cert_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+     "package": "com.bank"
+    },
+    {
+     "cert_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+     "package": "com.bank"
+    },
+    {
+     "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "package": "com.bank"
+    },
+    {
+     "cert_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+     "package": "com.other"
+    },
+    {
+     "cert_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+     "package": "com.other"
+    }
+   ]
+  },
+  {
+   "app": {
+    "history": [
+     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "multiple_signers": false,
+    "package": "com.bank",
+    "signers": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ]
+   },
+   "item": {
+    "apps": [
+     {
+      "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "package": "com.bank"
+     }
+    ],
+    "id": "00000000-0000-4000-8000-000000000001",
+    "name": "Bound current",
+    "password": "p1",
+    "type": "login",
+    "uris": [],
+    "username": "ned"
+   },
+   "name": "app_bind: fill records nothing",
+   "op": "app_bind",
+   "result": null
+  },
+  {
+   "app": {
+    "history": [
+     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "multiple_signers": false,
+    "package": "com.bank",
+    "signers": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ]
+   },
+   "item": {
+    "apps": [
+     {
+      "cert_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "package": "com.bank"
+     }
+    ],
+    "id": "00000000-0000-4000-8000-000000000003",
+    "name": "Bound changed",
+    "password": "p1",
+    "type": "login",
+    "uris": [],
+    "username": "ned"
+   },
+   "name": "app_bind: signature_changed records nothing",
+   "op": "app_bind",
+   "result": null
+  },
+  {
+   "app": {
+    "history": [
+     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "multiple_signers": false,
+    "package": "com.bank",
+    "signers": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ]
+   },
+   "item": {
+    "apps": [
+     {
+      "cert_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "package": "com.bank"
+     }
+    ],
+    "id": "00000000-0000-4000-8000-000000000011",
+    "name": "Changed and unbound",
+    "password": "p1",
+    "type": "login",
+    "uris": [
+     {
+      "match": "base_domain",
+      "uri": "androidapp://com.bank"
+     }
+    ],
+    "username": "ned"
+   },
+   "name": "app_bind: signature_changed takes precedence over an unbound association",
+   "op": "app_bind",
+   "result": null
+  },
+  {
+   "app": {
+    "history": [],
+    "multiple_signers": true,
+    "package": "com.bank",
+    "signers": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    ]
+   },
+   "item": {
+    "apps": [],
+    "id": "00000000-0000-4000-8000-000000000004",
+    "name": "Unbound",
+    "password": "p1",
+    "type": "login",
+    "uris": [
+     {
+      "match": "base_domain",
+      "uri": "androidapp://com.bank"
+     }
+    ],
+    "username": "ned"
+   },
+   "name": "app_bind: more than one signer records nothing",
+   "op": "app_bind",
+   "result": null
+  },
+  {
+   "app": {
+    "history": [
+     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "multiple_signers": false,
+    "package": "com.bank",
+    "signers": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ]
+   },
+   "item": {
+    "apps": [
+     {
+      "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "package": "com.other"
+     }
+    ],
+    "id": "00000000-0000-4000-8000-000000000010",
+    "name": "Other package",
+    "password": "p1",
+    "type": "login",
+    "uris": [],
+    "username": "ned"
+   },
+   "name": "app_bind: no association records nothing",
+   "op": "app_bind",
+   "result": null
+  },
+  {
+   "app": {
+    "history": [
+     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "multiple_signers": false,
+    "package": "com.bank",
+    "signers": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ]
+   },
+   "items": [
+    {
+     "apps": [
+      {
+       "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bank app",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Rotated",
+     "password": "p5",
+     "type": "login",
+     "uris": [],
+     "username": "alice"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Bank site",
+     "password": "p7",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "bob"
+    }
+   ],
+   "name": "app_save: already stored",
+   "op": "app_save",
+   "password": "p1",
+   "result": {
+    "action": "none"
+   },
+   "username": "ned"
+  },
+  {
+   "app": {
+    "history": [
+     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "multiple_signers": false,
+    "package": "com.bank",
+    "signers": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ]
+   },
+   "items": [
+    {
+     "apps": [
+      {
+       "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bank app",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Rotated",
+     "password": "p5",
+     "type": "login",
+     "uris": [],
+     "username": "alice"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Bank site",
+     "password": "p7",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "bob"
+    }
+   ],
+   "name": "app_save: a new password",
+   "op": "app_save",
+   "password": "p2",
+   "result": {
+    "action": "update",
+    "id": "00000000-0000-4000-8000-000000000001"
+   },
+   "username": "ned"
+  },
+  {
+   "app": {
+    "history": [
+     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "multiple_signers": false,
+    "package": "com.bank",
+    "signers": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ]
+   },
+   "items": [
+    {
+     "apps": [
+      {
+       "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bank app",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Rotated",
+     "password": "p5",
+     "type": "login",
+     "uris": [],
+     "username": "alice"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Bank site",
+     "password": "p7",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "bob"
+    }
+   ],
+   "name": "app_save: a rebind match is not considered",
+   "op": "app_save",
+   "password": "p6",
+   "result": {
+    "action": "new",
+    "apps": [
+     {
+      "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "package": "com.bank"
+     }
+    ],
+    "name": "com.bank",
+    "uris": []
+   },
+   "username": "alice"
+  },
+  {
+   "app": {
+    "history": [
+     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "multiple_signers": false,
+    "package": "com.bank",
+    "signers": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ]
+   },
+   "items": [
+    {
+     "apps": [
+      {
+       "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bank app",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Rotated",
+     "password": "p5",
+     "type": "login",
+     "uris": [],
+     "username": "alice"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Bank site",
+     "password": "p7",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "bob"
+    }
+   ],
+   "name": "app_save: a web item is not considered",
+   "op": "app_save",
+   "password": "p7",
+   "result": {
+    "action": "new",
+    "apps": [
+     {
+      "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "package": "com.bank"
+     }
+    ],
+    "name": "com.bank",
+    "uris": []
+   },
+   "username": "bob"
+  },
+  {
+   "app": {
+    "history": [
+     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "multiple_signers": false,
+    "package": "com.bank",
+    "signers": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ]
+   },
+   "items": [
+    {
+     "apps": [
+      {
+       "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bank app",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Rotated",
+     "password": "p5",
+     "type": "login",
+     "uris": [],
+     "username": "alice"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Bank site",
+     "password": "p7",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "bob"
+    }
+   ],
+   "name": "app_save: a new login, one signer, bound",
+   "op": "app_save",
+   "password": "x",
+   "result": {
+    "action": "new",
+    "apps": [
+     {
+      "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "package": "com.bank"
+     }
+    ],
+    "name": "com.bank",
+    "uris": []
+   },
+   "username": "carol"
+  },
+  {
+   "app": {
+    "history": [],
+    "multiple_signers": true,
+    "package": "com.bank",
+    "signers": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    ]
+   },
+   "items": [
+    {
+     "apps": [
+      {
+       "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bank app",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Rotated",
+     "password": "p5",
+     "type": "login",
+     "uris": [],
+     "username": "alice"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Bank site",
+     "password": "p7",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "bob"
+    }
+   ],
+   "name": "app_save: a new login, more than one signer, unbound",
+   "op": "app_save",
+   "password": "x",
+   "result": {
+    "action": "new",
+    "apps": [],
+    "name": "com.bank",
+    "uris": [
+     {
+      "match": "base_domain",
+      "uri": "androidapp://com.bank"
+     }
+    ]
+   },
+   "username": "carol"
+  },
+  {
+   "app": {
+    "history": [],
+    "multiple_signers": false,
+    "package": "com.bank",
+    "signers": []
+   },
+   "items": [
+    {
+     "apps": [
+      {
+       "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bank app",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Rotated",
+     "password": "p5",
+     "type": "login",
+     "uris": [],
+     "username": "alice"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Bank site",
+     "password": "p7",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "bob"
+    }
+   ],
+   "name": "app_save: a new login, signing information not read, unbound",
+   "op": "app_save",
+   "password": "x",
+   "result": {
+    "action": "new",
+    "apps": [],
+    "name": "com.bank",
+    "uris": [
+     {
+      "match": "base_domain",
+      "uri": "androidapp://com.bank"
+     }
+    ]
+   },
+   "username": "carol"
+  },
+  {
+   "app": {
+    "history": [],
+    "multiple_signers": true,
+    "package": "com.bank",
+    "signers": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    ]
+   },
+   "items": [
+    {
+     "apps": [
+      {
+       "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bank app",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Rotated",
+     "password": "p5",
+     "type": "login",
+     "uris": [],
+     "username": "alice"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Bank site",
+     "password": "p7",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "bob"
+    }
+   ],
+   "name": "app_save: an unverified match is not considered",
+   "op": "app_save",
+   "password": "p2",
+   "result": {
+    "action": "new",
+    "apps": [],
+    "name": "com.bank",
+    "uris": [
+     {
+      "match": "base_domain",
+      "uri": "androidapp://com.bank"
+     }
+    ]
+   },
+   "username": "ned"
+  },
+  {
+   "app": {
+    "history": [
+     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "multiple_signers": false,
+    "package": "com.bank",
+    "signers": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ]
+   },
+   "items": [
+    {
+     "apps": [
+      {
+       "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Bank app",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Rotated",
+     "password": "p5",
+     "type": "login",
+     "uris": [],
+     "username": "alice"
+    },
+    {
+     "apps": [],
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Bank site",
+     "password": "p7",
+     "type": "login",
+     "uris": [
+      {
+       "match": "base_domain",
+       "uri": "bank.com"
+      }
+     ],
+     "username": "bob"
+    }
+   ],
+   "name": "app_save: an empty password",
+   "op": "app_save",
+   "password": "",
+   "result": {
+    "action": "none"
+   },
+   "username": "ned"
+  },
+  {
+   "app": {
+    "history": [
+     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "multiple_signers": false,
+    "package": "com.bank",
+    "signers": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ]
+   },
+   "items": [
+    {
+     "apps": [
+      {
+       "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000001",
+     "name": "Zed",
+     "password": "p1",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000002",
+     "name": "Alpha",
+     "password": "p2",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    },
+    {
+     "apps": [
+      {
+       "cert_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+       "package": "com.bank"
+      }
+     ],
+     "id": "00000000-0000-4000-8000-000000000003",
+     "name": "Alpha",
+     "password": "p4",
+     "type": "login",
+     "uris": [],
+     "username": "ned"
+    }
+   ],
+   "name": "app_save: the first of several same-username fills is updated",
+   "op": "app_save",
+   "password": "p3",
+   "result": {
+    "action": "update",
+    "id": "00000000-0000-4000-8000-000000000002"
+   },
+   "username": "ned"
   }
  ],
- "description": "Autofill matching: URI preparation with the scheme prefix, trim, user information, and empty-label rules, cross-site lookalikes, page URLs, registrable domains with the known_suffixes table, every match mode, the scheme rule and local hosts, item outcomes and candidate order, frame selection, and save offers. Expected values are worked out from the spec text by hand. The known-suffix lookup returns the longest entry of known_suffixes that equals the host or a sequence of its trailing labels, except that suffix_answers replaces the answer for the hosts it lists; each of those answers fails the check, so a registrable result is null and every match involving such a host is none. Items are compact: a client expands each into a full body item with these values. Hosts and origins are serialised as WHATWG URLs write them, with one trailing dot of a domain removed.",
+ "description": "Autofill matching: URI preparation with the scheme prefix, trim, user information, and empty-label rules, cross-site lookalikes, page URLs, registrable domains with the known_suffixes table, every match mode, the scheme rule and local hosts, item outcomes and candidate order, frame selection, and save offers. Expected values are worked out from the spec text by hand. The known-suffix lookup returns the longest entry of known_suffixes that equals the host or a sequence of its trailing labels, except that suffix_answers replaces the answer for the hosts it lists; each of those answers fails the check, so a registrable result is null and every match involving such a host is none. Items are compact: a client expands each into a full body item with these values. Hosts and origins are serialised as WHATWG URLs write them, with one trailing dot of a domain removed. The known_suffixes table is a fixture: a few real Public Suffix List rules, home.arpa included, not the whole list. Android cases: android_page builds the Android web page <scheme>://<host>/ from a browser's scheme and host, android_match, android_items, and android_save match it, and app_items, app_bind, and app_save use an app page {package, signers, history (oldest first), multiple_signers} with digests in lowercase hex. A compact item's optional apps lists its login.apps entries. app_items gives each candidate's kind; app_bind gives the item's login.apps after a confirmed fill, or null when the fill records nothing; a new item in an android_save or app_save result lists its uris and apps.",
  "known_suffixes": [
   "com",
   "net",
@@ -2755,6 +6435,7 @@
   "uk",
   "co.uk",
   "arpa",
+  "home.arpa",
   "xn--p1ai"
  ],
  "suffix_answers": {

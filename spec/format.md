@@ -689,6 +689,91 @@ It considers the login items whose outcome is `fill` against that page:
 A client saves nothing without the user's confirmation, and never stores the page's path, query, or
 fragment from a save offer.
 
+### Android web pages
+
+An Android client reads a page from a browser on its allowlist as the scheme and host the browser
+reports for the focused field, with no port, path, or query; `docs/android.md` defines the
+allowlist and the fields a fill reaches. The **Android web page** is the URL `<scheme>://<host>/`
+parsed as a page URL. The host is a host alone: it contains no `/`, `\`, `?`, `#`, `@`, `:`, ASCII
+whitespace, or control character, except that an IPv6 address in brackets contains `:`. Android
+browsers never report a port, so a host with any port, the scheme's default included, is not one. A
+browser that reports no scheme, a scheme other than `http` or `https`, or a host that breaks these
+rules or does not parse gives no Android web page, and the client treats the browser as not
+allowlisted.
+
+An item URI matches an Android web page by its mode:
+
+| `match` | Outcome |
+| --- | --- |
+| `base_domain` | `fill` when the registrable domains are equal, as under match modes |
+| `host` | `fill` when the hosts are equal, the prepared item URI has no port, and the page host is not a local host; `confirm` when the hosts are equal otherwise |
+| `starts_with`, `exact` | `confirm` when the schemes and hosts are equal |
+| `never` | `none` |
+
+The scheme rule then applies unchanged, so an `https` item URI on an `http` page gives `none`, or
+`confirm` on a local host, and a known-suffix answer that fails its check gives `none` in every
+mode. Item outcomes and candidates follow the rules above. The page's origin is `<scheme>://<host>`.
+
+### App pages
+
+An **app page** is a fill or save request from an app that is not an allowlisted browser. It holds
+the app's package name, its current signing certificate digests, its signing certificate history,
+and whether it has more than one signer. A digest is the SHA-256 of a certificate's DER encoding,
+64 lowercase hex characters, as `cert_sha256` is, so digests compare exactly; a client refuses to
+build a page with any other digest. An app with one signer has one current digest and a history,
+oldest first, that ends with it, as Android's `signingCertificateHistory` reports, and a client
+refuses to build such a page with a history that does not. An app with more than one signer has
+no history and is `unverified` whatever digests it lists. A client that cannot read an app's
+signing information gives the page no current digest and no history.
+
+A login item has an association with an app page through either of:
+
+- a **bound association**: a `login.apps` entry whose `package` equals the page's package name;
+- an **unbound association**: a `login.uris` entry whose `match` is not `never` (an unknown value
+  counts as `never`) and whose `uri`, with leading and trailing ASCII whitespace removed, is
+  `androidapp://` followed by exactly the page's package name, the scheme compared ASCII
+  case-insensitively.
+
+Package names compare case-sensitively, so `androidapp://com.Example` is not an association with
+`com.example`, and a `uri` with anything after the package name, such as `/`, is not one either.
+Each association gives a kind and an outcome:
+
+| App page | Association | Kind | Outcome |
+| --- | --- | --- | --- |
+| More than one signer, or no current digest | Either | `unverified` | `confirm` |
+| One signer, whose digest equals `cert_sha256` | Bound | `fill` | `fill` |
+| One signer; `cert_sha256` is in the history but is not the current digest | Bound | `rebind` | `confirm` |
+| One signer; `cert_sha256` is not in the history | Bound | `signature_changed` | `confirm` |
+| One signer | Unbound | `bind` | `confirm` |
+
+An item with no association has the outcome `none`. Otherwise its kind is the first of `fill`,
+`rebind`, `signature_changed`, `bind`, and `unverified` that one of its associations gives, so a
+bound association whose certificate changed outside the history takes precedence over an unbound
+one. The candidates for an app page are the items with an association, in the candidate order of
+item outcome; any other item fills only through an explicit choice, as `docs/android.md` defines.
+
+A confirmed fill records the item's kind as a local edit of its `login.apps`:
+
+- `bind` adds `{"package": <package name>, "cert_sha256": <current digest>}`;
+- `rebind` sets the `cert_sha256` of each entry for the package whose digest is in the history to
+  the current digest, and then removes each entry it rewrote that has the same package and digest
+  as an entry before it; entries it did not rewrite stay as they are, duplicates included;
+- every other kind records nothing.
+
+When a client records a confirmed fill's binding is its own policy; `docs/android.md` records it
+only after a successful pull in the same unlock.
+
+### Android save offers
+
+A save offer on an Android web page follows the save offer rules, with `<scheme>://<host>` as the
+page origin: a new login item is named by the host, and its one URI is `<scheme>://<host>` with mode
+`base_domain`.
+
+A save offer on an app page follows the same rules with the login items whose kind is `fill` in
+place of those whose outcome is `fill`. A new login item is named by the package name. It records a
+bound association with the current digest when the app has one signer and a current digest, and
+otherwise an unbound association, the one URI `androidapp://<package name>` with mode `base_domain`.
+
 ## Format versioning
 
 `format_version` in the header and `v` in the body version the two layers separately. A client

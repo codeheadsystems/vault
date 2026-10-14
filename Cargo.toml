@@ -6,6 +6,7 @@ members = [
     "crates/vault-server",
     "crates/vault-cli",
     "crates/vault-wasm",
+    "crates/vault-android",
 ]
 resolver = "3"
 
@@ -59,6 +60,9 @@ webpki-roots = "1"
 wasm-bindgen = "=0.2.129"
 js-sys = "0.3"
 wasm-bindgen-test = "0.3"
+# Pinned exactly: the generated Kotlin must match the scaffolding of the same version.
+uniffi = "=0.32.2"
+idna = "1"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
@@ -83,3 +87,12 @@ inherits = "release"
 lto = "fat"
 codegen-units = 1
 opt-level = 3
+
+# The Android app's native library: `cargo ndk -t arm64-v8a -t x86_64 -P 29 build -p vault-android
+# --profile android`.
+[profile.android]
+inherits = "release"
+lto = "fat"
+codegen-units = 1
+opt-level = 3
+strip = true

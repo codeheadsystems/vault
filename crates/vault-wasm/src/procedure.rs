@@ -1,5 +1,6 @@
-//! The `vault-client` machines, stepped from JavaScript, and the commit through a JavaScript
-//! host that queues IndexedDB writes in one transaction.
+//! The `vault-client` procedures for JavaScript: `vault_client::session::Procedure` behind JSON
+//! and camelCase conversions, and a commit through a JavaScript host that queues IndexedDB writes
+//! in one transaction.
 
 use crate::WebRng;
 use crate::convert::{
@@ -8,76 +9,19 @@ use crate::convert::{
 };
 use js_sys::{Function, Uint8Array};
 use serde_json::{Value, json};
-use vault_client::commit::{ApplyError, CommitHost, apply};
-use vault_client::passwd::{PasswdChange, PasswdOptions, PasswdReport, passwd};
-use vault_client::recover::{RecoverReport, recover};
-use vault_client::restore::{Revision, fetch_revision};
-use vault_client::setup::{repair_token, setup};
-use vault_client::sync::{Mode, SyncOutcome, SyncReport, sync};
-use vault_client::unlock::{UnlockReport, unlock};
+use vault_client::commit::{Applied, ApplyError, CommitHost};
+use vault_client::passwd::{PasswdChange, PasswdOptions};
+use vault_client::session::{self, Event, Report};
+use vault_client::sync::{Mode, SyncOutcome, SyncReport};
 use vault_client::{
-    Answer, ClientError, ClientState, Confirmation, Finished, Input, Keys, Machine, Precondition,
-    Prompt, Purpose, Request, Response, Save, SavedKey, SecretKeyChange, SecretKeyStore, Step,
+    Answer, ClientError, ClientState, Confirmation, Input, Keys, Precondition, Prompt, Purpose,
+    Request, Response, SavedKey, SecretKeyStore,
 };
 use vault_core::credentials::PendingKeyOutcome;
 use vault_core::kdf::KdfParams;
 use vault_core::secret::{SecretKey, VaultKey};
 use wasm_bindgen::prelude::*;
 use zeroize::Zeroizing;
-
-/// A finished procedure's result, as JSON for JavaScript and, after `fetchRevision`, the
-/// revision.
-struct Out {
-    json: Value,
-    revision: Option<Revision>,
-}
-
-/// A machine whose result type is erased to [`Out`].
-trait AnyMachine {
-    fn start(&mut self, now: u64) -> Step<Out>;
-    fn step(&mut self, input: Input, now: u64) -> Step<Out>;
-}
-
-struct Typed<T> {
-    machine: Machine<T>,
-    out: fn(T) -> Out,
-}
-
-impl<T: 'static> AnyMachine for Typed<T> {
-    fn start(&mut self, now: u64) -> Step<Out> {
-        erase(self.machine.start(now), self.out)
-    }
-
-    fn step(&mut self, input: Input, now: u64) -> Step<Out> {
-        erase(self.machine.step(input, now), self.out)
-    }
-}
-
-fn erase<T>(step: Step<T>, out: fn(T) -> Out) -> Step<Out> {
-    match step {
-        Step::Request(r) => Step::Request(r),
-        Step::Prompt(p) => Step::Prompt(p),
-        Step::Save(s) => Step::Save(s),
-        Step::Done(f) => Step::Done(Finished {
-            result: f.result.map(out),
-            state: f.state,
-            vault_key: f.vault_key,
-            started_vault_key: f.started_vault_key,
-            secret_key: f.secret_key,
-        }),
-    }
-}
-
-fn typed<T: 'static>(machine: Machine<T>, out: fn(T) -> Out) -> Box<dyn AnyMachine> {
-    Box::new(Typed { machine, out })
-}
-
-fn json_out(json: Value) -> Out {
-    Out {
-        json,
-        revision: None,
-    }
-}
 
 fn pending_outcome(p: Option<PendingKeyOutcome>) -> Value {
     match p {
@@ -105,126 +49,78 @@ fn error_json(e: ClientError) -> Value {
     json!({"code": e.code(), "message": e.to_string()})
 }
 
-fn sync_out(r: SyncReport) -> Out {
-    json_out(sync_json(&r))
-}
-
-fn unlock_out(r: UnlockReport) -> Out {
-    json_out(json!({"sync": match &r.sync {
-        Ok(s) => sync_json(s),
-        Err(e) => json!({"error": error_json(*e)}),
-    }}))
-}
-
-fn recover_out(r: RecoverReport) -> Out {
-    json_out(json!({
-        "generation": r.generation,
-        "revision": r.revision,
-        "expired": r.expired,
-        "credentialsChanged": r.credentials_changed,
-        "pendingSecretKey": pending_outcome(r.pending_secret_key),
-    }))
-}
-
-fn passwd_out(r: PasswdReport) -> Out {
-    json_out(json!({
-        "generation": r.generation,
-        "retiredRevision": r.retired_revision,
-        "expired": r.expired,
-    }))
-}
-
-fn unit_out((): ()) -> Out {
-    json_out(json!({}))
-}
-
-fn revision_out(r: Revision) -> Out {
-    Out {
-        json: json!({"id": r.id, "generation": r.generation}),
-        revision: Some(r),
+fn report_json(r: &Report) -> Value {
+    match r {
+        Report::Sync(r) => sync_json(r),
+        Report::Unlock(r) => json!({"sync": match &r.sync {
+            Ok(s) => sync_json(s),
+            Err(e) => json!({"error": error_json(*e)}),
+        }}),
+        Report::Recover(r) => json!({
+            "generation": r.generation,
+            "revision": r.revision,
+            "expired": r.expired,
+            "credentialsChanged": r.credentials_changed,
+            "pendingSecretKey": pending_outcome(r.pending_secret_key),
+        }),
+        Report::Passwd(r) => json!({
+            "generation": r.generation,
+            "retiredRevision": r.retired_revision,
+            "expired": r.expired,
+        }),
+        Report::Setup | Report::RepairToken => json!({}),
+        Report::Revision(r) => json!({"id": r.id, "generation": r.generation}),
     }
 }
 
 /// The keys a procedure starts with: `{ vaultKey?, secretKey?, pendingSecretKey? }`.
-fn keys(v: &JsValue) -> Result<(Keys, Option<SecretKey>), JsValue> {
+fn keys(v: &JsValue) -> Result<Keys, JsValue> {
     if v.is_undefined() || v.is_null() {
-        return Ok((Keys::default(), None));
+        return Ok(Keys::default());
     }
-    let vault_key = get_array::<32>(v, "vaultKey")?.map(|k| VaultKey::from_bytes(*k));
-    let secret_key = get_array::<16>(v, "secretKey")?.map(|k| SecretKey::from_bytes(*k));
-    let pending = get_array::<16>(v, "pendingSecretKey")?.map(|k| SecretKey::from_bytes(*k));
-    let kept = pending.as_ref().map(SecretKey::clone_secret);
-    Ok((
-        Keys {
-            vault_key,
-            secret_key,
-            pending_secret_key: pending,
-        },
-        kept,
-    ))
+    Ok(Keys {
+        vault_key: get_array::<32>(v, "vaultKey")?.map(|k| VaultKey::from_bytes(*k)),
+        secret_key: get_array::<16>(v, "secretKey")?.map(|k| SecretKey::from_bytes(*k)),
+        pending_secret_key: get_array::<16>(v, "pendingSecretKey")?
+            .map(|k| SecretKey::from_bytes(*k)),
+    })
 }
 
 /// A running `vault-client` procedure.
 #[wasm_bindgen]
 pub struct Procedure {
-    machine: Box<dyn AnyMachine>,
-    /// The pending secret key, from the keys or a save, for a commit that promotes it.
-    pending: Option<SecretKey>,
-    save: Option<Save>,
-    finished: Option<Finished<Out>>,
+    inner: session::Procedure,
 }
 
 impl Procedure {
-    fn new(machine: Box<dyn AnyMachine>, pending: Option<SecretKey>) -> Procedure {
-        Procedure {
-            machine,
-            pending,
-            save: None,
-            finished: None,
-        }
+    pub(crate) fn inner(&self) -> &session::Procedure {
+        &self.inner
     }
+}
 
-    /// The revision a finished `fetchRevision` holds.
-    pub(crate) fn revision(&self) -> Result<&Revision, JsValue> {
-        self.finished
-            .as_ref()
-            .and_then(|f| f.result.as_ref().ok())
-            .and_then(|o| o.revision.as_ref())
-            .ok_or_else(|| usage("not a finished fetchRevision procedure"))
-    }
-
-    fn present(&mut self, step: Step<Out>) -> JsValue {
-        match step {
-            Step::Request(r) => request_js(&r),
-            Step::Prompt(p) => to_js(&json!({"type": "prompt", "prompt": prompt_json(p)})),
-            Step::Save(s) => {
-                let (slot, key) = match &s.secret_key {
-                    SavedKey::Current(k) => ("current", k),
-                    SavedKey::Pending(k) => ("pending", k),
-                };
-                if let SavedKey::Pending(k) = &s.secret_key {
-                    self.pending = Some(k.clone_secret());
-                }
-                let o = to_js(&json!({
-                    "type": "save",
-                    "state": state_text(&s.state),
-                    "slot": slot,
-                    "vaultId": hex::encode(s.state.vault_id),
-                }));
-                let kit = vault_core::secret_key_text::encode(key);
-                set(&o, "kit", &kit.as_str().into());
-                self.save = Some(s);
-                o
-            }
-            Step::Done(f) => {
-                let o = match &f.result {
-                    Ok(out) => json!({"type": "done", "ok": true, "result": out.json}),
-                    Err(e) => json!({"type": "done", "ok": false, "error": error_json(*e)}),
-                };
-                self.finished = Some(f);
-                to_js(&o)
-            }
+fn present(event: Event<'_>) -> JsValue {
+    match event {
+        Event::Request(r) => request_js(&r),
+        Event::Prompt(p) => to_js(&json!({"type": "prompt", "prompt": prompt_json(p)})),
+        Event::Save(s) => {
+            let (slot, key) = match &s.secret_key {
+                SavedKey::Current(k) => ("current", k),
+                SavedKey::Pending(k) => ("pending", k),
+            };
+            let o = to_js(&json!({
+                "type": "save",
+                "state": state_text(&s.state),
+                "slot": slot,
+                "vaultId": hex::encode(s.state.vault_id),
+            }));
+            let kit = vault_core::secret_key_text::encode(key);
+            set(&o, "kit", &kit.as_str().into());
+            o
         }
+        Event::Done(f) => to_js(&match &f.result {
+            Ok(r) => json!({"type": "done", "ok": true, "result": report_json(r)}),
+            Err(e) => json!({"type": "done", "ok": false, "error": error_json(*e)}),
+        }),
     }
 }
 
@@ -330,10 +226,10 @@ fn answer(v: &JsValue) -> Result<Answer, JsValue> {
     }
 }
 
-/// A JavaScript `CommitHost`: each method only queues IndexedDB requests.
+/// A JavaScript `CommitHost`: each method only queues IndexedDB requests, so none reads a slot.
+/// The pending key a commit promotes comes from the procedure.
 struct JsHost<'a> {
     host: &'a JsValue,
-    pending: Option<&'a SecretKey>,
 }
 
 impl JsHost<'_> {
@@ -368,15 +264,20 @@ impl CommitHost for JsHost<'_> {
         self.store("storeCurrent", vault_id, key)
     }
 
-    fn copy_pending_to_current(
+    fn store_pending(
         &mut self,
         _: SecretKeyStore,
         vault_id: &[u8; 16],
+        key: &SecretKey,
     ) -> Result<(), JsValue> {
-        let p = self
-            .pending
-            .ok_or_else(|| js_err("usage", "no pending secret key was given to the procedure"))?;
-        self.store("storeCurrent", vault_id, p)
+        self.store("storePending", vault_id, key)
+    }
+
+    fn copy_pending_to_current(&mut self, _: SecretKeyStore, _: &[u8; 16]) -> Result<(), JsValue> {
+        Err(js_err(
+            "usage",
+            "no pending secret key was given to the procedure",
+        ))
     }
 
     fn delete_pending(&mut self, _: SecretKeyStore, vault_id: &[u8; 16]) -> Result<(), JsValue> {
@@ -388,8 +289,27 @@ impl CommitHost for JsHost<'_> {
     }
 }
 
-fn state_arg(text: &str) -> Result<ClientState, JsValue> {
-    state(text)
+fn apply_err(e: ApplyError<JsValue>) -> JsValue {
+    match e {
+        ApplyError::Client(e) => client_err(e),
+        ApplyError::Host(e) => e,
+    }
+}
+
+fn applied_js(a: Option<Applied<JsValue>>, superseded: bool) -> JsValue {
+    match a {
+        None => to_js(&json!({
+            "written": false, "superseded": superseded, "mergedLocalChanges": false,
+            "expired": [], "pendingLeft": false,
+        })),
+        Some(a) => to_js(&json!({
+            "written": a.commit.state.is_some(),
+            "superseded": false,
+            "mergedLocalChanges": a.commit.merged_local_changes,
+            "expired": a.commit.expired,
+            "pendingLeft": a.pending_left.is_some(),
+        })),
+    }
 }
 
 #[wasm_bindgen]
@@ -402,29 +322,20 @@ impl Procedure {
             "interactive-ask-again" => Mode::Interactive { ask_again: true },
             _ => return Err(usage("unknown sync mode")),
         };
-        let (k, pending) = keys(keys_in)?;
-        Ok(Procedure::new(
-            typed(sync(state_arg(state_text_in)?, k, mode, WebRng), sync_out),
-            pending,
-        ))
+        let inner = session::Procedure::sync(state(state_text_in)?, keys(keys_in)?, mode, WebRng);
+        Ok(Procedure { inner })
     }
 
     /// An unlock with a typed master password, which pulls first.
     pub fn unlock(state_text_in: &str, keys_in: &JsValue) -> Result<Procedure, JsValue> {
-        let (k, pending) = keys(keys_in)?;
-        Ok(Procedure::new(
-            typed(unlock(state_arg(state_text_in)?, k, WebRng), unlock_out),
-            pending,
-        ))
+        let inner = session::Procedure::unlock(state(state_text_in)?, keys(keys_in)?, WebRng);
+        Ok(Procedure { inner })
     }
 
     /// `vault sync --recover`.
     pub fn recover(state_text_in: &str, keys_in: &JsValue) -> Result<Procedure, JsValue> {
-        let (k, pending) = keys(keys_in)?;
-        Ok(Procedure::new(
-            typed(recover(state_arg(state_text_in)?, k, WebRng), recover_out),
-            pending,
-        ))
+        let inner = session::Procedure::recover(state(state_text_in)?, keys(keys_in)?, WebRng);
+        Ok(Procedure { inner })
     }
 
     /// A credential change: `"new-password"`, `"rekey"`, `"new-secret-key"`, or
@@ -451,29 +362,24 @@ impl Procedure {
             kdf,
             test_kdf: false,
         };
-        let (k, pending) = keys(keys_in)?;
-        Ok(Procedure::new(
-            typed(
-                passwd(state_arg(state_text_in)?, k, options, WebRng),
-                passwd_out,
-            ),
-            pending,
-        ))
+        let inner =
+            session::Procedure::passwd(state(state_text_in)?, keys(keys_in)?, options, WebRng);
+        Ok(Procedure { inner })
     }
 
     /// Adds this browser to an existing vault. The extension's IndexedDB plays the secret key
     /// file, so the state records the `file` store.
     pub fn setup() -> Procedure {
-        Procedure::new(typed(setup(SecretKeyStore::File, WebRng), unit_out), None)
+        Procedure {
+            inner: session::Procedure::setup(SecretKeyStore::File, WebRng),
+        }
     }
 
     /// Checks a new server token against the stored `vault_id`.
     #[wasm_bindgen(js_name = repairToken)]
     pub fn repair_token(state_text_in: &str) -> Result<Procedure, JsValue> {
-        Ok(Procedure::new(
-            typed(repair_token(state_arg(state_text_in)?, WebRng), unit_out),
-            None,
-        ))
+        let inner = session::Procedure::repair_token(state(state_text_in)?, WebRng);
+        Ok(Procedure { inner })
     }
 
     /// Fetches and opens revision `id` for a restore.
@@ -483,31 +389,28 @@ impl Procedure {
         keys_in: &JsValue,
         id: f64,
     ) -> Result<Procedure, JsValue> {
-        let (k, pending) = keys(keys_in)?;
-        Ok(Procedure::new(
-            typed(
-                fetch_revision(state_arg(state_text_in)?, k, id as u64, WebRng),
-                revision_out,
-            ),
-            pending,
-        ))
+        let inner = session::Procedure::fetch_revision(
+            state(state_text_in)?,
+            keys(keys_in)?,
+            id as u64,
+            WebRng,
+        );
+        Ok(Procedure { inner })
     }
 
     /// Runs the procedure up to its first step.
     pub fn start(&mut self, now: f64) -> JsValue {
-        let s = self.machine.start(now as u64);
-        self.present(s)
+        present(self.inner.start(now as u64))
     }
 
     /// Feeds the input for the previous step and runs up to the next.
     pub fn step(&mut self, input_in: &JsValue, now: f64) -> Result<JsValue, JsValue> {
         let i = input(input_in)?;
-        let s = self.machine.step(i, now as u64);
-        Ok(self.present(s))
+        Ok(present(self.inner.step(i, now as u64)))
     }
 
-    /// After a `save` step: stores the secret key in its slot, then commits the state, through
-    /// `host` inside one IndexedDB transaction.
+    /// After a `save` step: stores the secret key in its slot, runs the commit rule, and writes
+    /// the state, through `host` inside one IndexedDB transaction.
     #[wasm_bindgen(js_name = applySave)]
     pub fn apply_save(
         &self,
@@ -516,27 +419,17 @@ impl Procedure {
         now: f64,
         host: &JsValue,
     ) -> Result<(), JsValue> {
-        let save = self
-            .save
-            .as_ref()
-            .ok_or_else(|| usage("no save step to apply"))?;
-        let (started, on_disk) = (state_arg(started)?, state_arg(on_disk)?);
-        let c = save
-            .commit(&started, &on_disk, now as u64, &mut WebRng)
-            .map_err(client_err)?;
-        let h = JsHost {
-            host,
-            pending: None,
-        };
-        let id = save.state.vault_id;
-        match &save.secret_key {
-            SavedKey::Current(k) => h.store("storeCurrent", &id, k)?,
-            SavedKey::Pending(k) => h.store("storePending", &id, k)?,
-        }
-        if let Some(s) = &c.state {
-            h.call("writeState", &[state_text(s).into()])?;
-        }
-        Ok(())
+        let (started, on_disk) = (state(started)?, state(on_disk)?);
+        self.inner
+            .apply_save(
+                &started,
+                &on_disk,
+                now as u64,
+                &mut WebRng,
+                &mut JsHost { host },
+            )
+            .map(|_| ())
+            .map_err(apply_err)
     }
 
     /// After `done`: commits the procedure's end and its secret key change through `host` inside
@@ -553,75 +446,36 @@ impl Procedure {
         now: f64,
         host: &JsValue,
     ) -> Result<JsValue, JsValue> {
-        let finished = self
-            .finished
-            .as_ref()
-            .ok_or_else(|| usage("the procedure has not finished"))?;
+        if self.inner.finished().is_none() {
+            return Err(usage("the procedure has not finished"));
+        }
         let (started, on_disk) = match (started, on_disk) {
-            (Some(s), Some(d)) => (state_arg(&s)?, state_arg(&d)?),
-            (None, None) => return self.apply_first(host),
+            (Some(s), Some(d)) => (Some(state(&s)?), Some(state(&d)?)),
+            (None, None) => (None, None),
             (None, Some(_)) => return Err(usage("a state is stored; run repairToken, not setup")),
             (Some(_), None) => return Err(usage("onDisk is missing")),
         };
-        let mut h = JsHost {
-            host,
-            pending: self.pending.as_ref(),
-        };
-        match apply(
-            finished,
-            &started,
-            &on_disk,
-            background,
-            now as u64,
-            &mut WebRng,
-            &mut h,
-        ) {
-            Ok(None) => Ok(to_js(&json!({
-                "written": false, "superseded": true, "mergedLocalChanges": false,
-                "expired": [], "pendingLeft": false,
-            }))),
-            Ok(Some(a)) => Ok(to_js(&json!({
-                "written": a.commit.state.is_some(),
-                "superseded": false,
-                "mergedLocalChanges": a.commit.merged_local_changes,
-                "expired": a.commit.expired,
-                "pendingLeft": a.pending_left.is_some(),
-            }))),
-            Err(ApplyError::Client(e)) => Err(client_err(e)),
-            Err(ApplyError::Host(e)) => Err(e),
-        }
-    }
-
-    /// Writes the first state of this browser, after `setup`: the secret key, then the state.
-    fn apply_first(&self, host: &JsValue) -> Result<JsValue, JsValue> {
-        let finished = self.finished.as_ref().expect("checked by apply");
-        let Some(state) = &finished.state else {
-            return Ok(to_js(&json!({
-                "written": false, "superseded": false, "mergedLocalChanges": false,
-                "expired": [], "pendingLeft": false,
-            })));
-        };
-        let h = JsHost {
-            host,
-            pending: None,
-        };
-        if let Some(SecretKeyChange::Replace(k)) = &finished.secret_key {
-            h.store("storeCurrent", &state.vault_id, k)?;
-        }
-        h.call("writeState", &[state_text(state).into()])?;
-        Ok(to_js(&json!({
-            "written": true, "superseded": false, "mergedLocalChanges": false,
-            "expired": [], "pendingLeft": false,
-        })))
+        let first = started.is_none();
+        let a = self
+            .inner
+            .apply(
+                started.as_ref(),
+                on_disk.as_ref(),
+                background,
+                now as u64,
+                &mut WebRng,
+                &mut JsHost { host },
+            )
+            .map_err(apply_err)?;
+        Ok(applied_js(a, !first))
     }
 
     /// After `done`: the vault key for the committed state, for `storage.session` and
     /// `Session.reopen`, or `null`. The caller zeroes the array when done.
     #[wasm_bindgen(js_name = vaultKey)]
     pub fn vault_key(&self) -> JsValue {
-        match self.finished.as_ref().and_then(|f| f.vault_key.as_ref()) {
-            Some(k) => bytes(k.expose()),
-            None => JsValue::NULL,
-        }
+        self.inner
+            .vault_key()
+            .map_or(JsValue::NULL, |k| bytes(k.expose()))
     }
 }

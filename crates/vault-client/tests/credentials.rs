@@ -2039,6 +2039,16 @@ impl vault_client::commit::CommitHost for Crash<'_> {
         self.slots.store_current(store, vault_id, key)
     }
 
+    fn store_pending(
+        &mut self,
+        store: SecretKeyStore,
+        vault_id: &[u8; 16],
+        key: &SecretKey,
+    ) -> Result<(), &'static str> {
+        self.step()?;
+        self.slots.store_pending(store, vault_id, key)
+    }
+
     fn copy_pending_to_current(
         &mut self,
         store: SecretKeyStore,

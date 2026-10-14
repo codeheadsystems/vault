@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Vault</string>
+    <string name="fill_with_vault">Fill with vault</string>
+    <string name="clip_channel">Clipboard</string>
+    <string name="clip_clearing">Clearing the clipboard in 45 seconds</string>
+</resources>

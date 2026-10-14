@@ -349,11 +349,178 @@ fn autofill_vectors() {
                         .unwrap(),
                 )
             }
-            op => panic!("unknown op {op}"),
+            op => android_case(c).unwrap_or_else(|| panic!("unknown op {op}")),
         };
         assert_eq!(got, c["result"], "{name}");
     }
     assert!(all.len() >= 200);
+}
+
+/// The vectors' known-suffix lookup in Rust: the longest table entry that equals the host or a
+/// sequence of its trailing labels, unless `suffix_answers` lists the host.
+struct Table<'a>(&'a Value);
+
+impl vault_client::autofill::SuffixList for Table<'_> {
+    fn known_suffix(&self, host: &str) -> Option<String> {
+        if let Some(a) = self.0["suffix_answers"].get(host) {
+            return a.as_str().map(str::to_owned);
+        }
+        self.0["known_suffixes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(Value::as_str)
+            .filter(|t| host == *t || host.ends_with(&format!(".{t}")))
+            .max_by_key(|t| t.len())
+            .map(str::to_owned)
+    }
+}
+
+/// The vectors' compact items as body items, `apps` included.
+fn body_items(items: &Value) -> Vec<vault_core::body::Item> {
+    let full: Vec<Value> = items
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|i| {
+            let mut item = json!({
+                "id": i["id"], "type": i["type"], "name": i["name"], "folder": "",
+                "favourite": false, "notes": "", "fields": [], "password_history": [],
+                "created": 0, "modified": 0, "modified_by": "00".repeat(16),
+            });
+            if i["type"] == "login" {
+                item["login"] = json!({
+                    "username": i["username"], "password": i["password"], "uris": i["uris"],
+                    "apps": i.get("apps").cloned().unwrap_or(json!([])), "totp": null,
+                    "passkeys": [],
+                });
+            }
+            item
+        })
+        .collect();
+    let body = json!({"v": 1, "horizon": 0, "items": full, "tombstones": []});
+    Body::from_json(body.to_string().as_bytes())
+        .unwrap()
+        .items
+        .clone()
+}
+
+/// The Android web and app cases. The extension has no bindings for them, so they run through
+/// `vault_client::autofill` compiled for `wasm32-unknown-unknown`.
+fn android_case(c: &Value) -> Option<Value> {
+    use vault_client::autofill::{
+        AppPage, Offer, Page, android_web_page, app_match, apps_after_fill, item_outcome,
+        page_candidates, page_save_offer,
+    };
+    let table = Table(c);
+    let app = |v: &Value| {
+        let list = |k: &str| -> Vec<String> {
+            v[k].as_array()
+                .unwrap()
+                .iter()
+                .map(|d| d.as_str().unwrap().to_owned())
+                .collect()
+        };
+        AppPage::new(
+            s(v, "package"),
+            list("signers"),
+            list("history"),
+            v["multiple_signers"].as_bool().unwrap(),
+        )
+        .unwrap()
+    };
+    let offer = |o: Offer| match o {
+        Offer::None => json!({"action": "none"}),
+        Offer::Update { id } => json!({"action": "update", "id": id}),
+        Offer::New(n) => json!({
+            "action": "new",
+            "name": n.name,
+            "uris": n.uris.iter().map(|u| json!({"uri": u.uri, "match": u.match_value})).collect::<Vec<_>>(),
+            "apps": n.apps.iter().map(|a| json!({"package": a.package, "cert_sha256": a.cert_sha256})).collect::<Vec<_>>(),
+        }),
+    };
+    let web = || android_web_page(&s(c, "scheme"), &s(c, "host")).map(Page::AndroidWeb);
+    let name = |o: vault_client::autofill::Outcome| vault_wasm_outcome(o);
+    Some(match c["op"].as_str().unwrap() {
+        "android_page" => match android_web_page(&s(c, "scheme"), &s(c, "host")) {
+            None => Value::Null,
+            Some(p) => json!({
+                "scheme": p.scheme, "host": p.host.text(), "port": p.port,
+                "path_query": p.path_query, "origin": p.origin(),
+            }),
+        },
+        "android_match" => {
+            let item = body_items(&json!([{
+                "id": "00000000-0000-4000-8000-000000000001", "type": "login", "name": "n",
+                "username": "u", "password": "p",
+                "uris": [{"uri": c["uri"], "match": c["match"]}],
+            }]));
+            json!(web().map_or("none", |p| name(item_outcome(&p, &item[0], &table))))
+        }
+        "android_items" => {
+            let its = body_items(&c["items"]);
+            json!(web().map_or(Vec::new(), |p| {
+                page_candidates(&p, &its, &table)
+                    .into_iter()
+                    .map(|(i, o)| json!({"id": i.id, "outcome": name(o)}))
+                    .collect()
+            }))
+        }
+        "android_save" => {
+            let its = body_items(&c["items"]);
+            web().map_or(json!({"action": "none"}), |p| {
+                offer(page_save_offer(
+                    &p,
+                    &s(c, "username"),
+                    &s(c, "password"),
+                    &its,
+                    &table,
+                ))
+            })
+        }
+        "app_items" => {
+            let its = body_items(&c["items"]);
+            let a = app(&c["app"]);
+            json!(
+                page_candidates(&Page::App(a.clone()), &its, &table)
+                    .into_iter()
+                    .map(|(i, o)| json!({
+                        "id": i.id, "outcome": name(o), "kind": app_match(i, &a).unwrap().code(),
+                    }))
+                    .collect::<Vec<_>>()
+            )
+        }
+        "app_bind" => {
+            let its = body_items(&json!([c["item"]]));
+            apps_after_fill(&its[0], &app(&c["app"])).map_or(Value::Null, |apps| {
+                json!(
+                    apps.iter()
+                        .map(|a| json!({"package": a.package, "cert_sha256": a.cert_sha256}))
+                        .collect::<Vec<_>>()
+                )
+            })
+        }
+        "app_save" => {
+            let its = body_items(&c["items"]);
+            let page = Page::App(app(&c["app"]));
+            offer(page_save_offer(
+                &page,
+                &s(c, "username"),
+                &s(c, "password"),
+                &its,
+                &table,
+            ))
+        }
+        _ => return None,
+    })
+}
+
+fn vault_wasm_outcome(o: vault_client::autofill::Outcome) -> &'static str {
+    match o {
+        vault_client::autofill::Outcome::Fill => "fill",
+        vault_client::autofill::Outcome::Confirm => "confirm",
+        vault_client::autofill::Outcome::None => "none",
+    }
 }
 
 /// The bindings name the path and query `pathQuery`; the vectors `path_query`.

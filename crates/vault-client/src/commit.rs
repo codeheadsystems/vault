@@ -4,7 +4,7 @@
 //! the storage a host supplies.
 
 use crate::error::ClientError;
-use crate::machine::{Finished, Save, SecretKeyChange};
+use crate::machine::{Finished, Save, SavedKey, SecretKeyChange};
 use crate::run::item_names;
 use crate::state::{ClientState, SecretKeyStore};
 use vault_core::clock::{BUILD_TIME_MS, check_clock};
@@ -189,6 +189,14 @@ pub trait CommitHost {
         vault_id: &[u8; 16],
         key: &SecretKey,
     ) -> Result<(), Self::Error>;
+    /// Stores `key` as the pending secret key of `vault_id` in `store`, for a `--new-secret-key`
+    /// change that has not pushed yet.
+    fn store_pending(
+        &mut self,
+        store: SecretKeyStore,
+        vault_id: &[u8; 16],
+        key: &SecretKey,
+    ) -> Result<(), Self::Error>;
     /// Copies the pending secret key of `vault_id` to the current slot, keeping the pending
     /// slot. Fails when there is no pending key.
     fn copy_pending_to_current(
@@ -304,5 +312,78 @@ pub fn apply<T, H: CommitHost>(
     Ok(Some(Applied {
         commit: c,
         pending_left,
+    }))
+}
+
+/// Carries out a [`Save`] through `host`. Call it under the host's lock, with `on_disk` read under
+/// that lock; `started` is the state the procedure started from, or the previous save's state.
+///
+/// The commit rule runs first, from `started` and `on_disk` to the saved state, and writes
+/// nothing: its refusals ([`ClientError::Superseded`] when another sync committed meanwhile, a
+/// clock before the build time) leave the host untouched. Then the writes run in this order:
+///
+/// 1. The saved secret key, in the slot [`SavedKey`] names: the current slot for `vault init`,
+///    the pending slot for `vault passwd --new-secret-key`.
+/// 2. The state, unless the state on disk already equals the result.
+///
+/// The host contract: when a write fails ([`ApplyError::Host`]) after the key write, the key write
+/// has already been issued. A host that queues its writes in a transaction (the extension's
+/// IndexedDB) discards every queued write when the call returns an error. A host that writes
+/// straight to storage (the CLI's files) is left with a pending key that the state on disk does
+/// not name; nothing uses it, and the next `--new-secret-key` replaces it. A save's state
+/// becomes the procedure's start for the next save and for [`apply`].
+pub fn apply_save<H: CommitHost>(
+    save: &Save,
+    started: &ClientState,
+    on_disk: &ClientState,
+    now: u64,
+    rng: &mut dyn Rng,
+    host: &mut H,
+) -> Result<Commit, ApplyError<H::Error>> {
+    let c = save.commit(started, on_disk, now, rng)?;
+    let (store, id) = (save.state.secret_key_store, save.state.vault_id);
+    match &save.secret_key {
+        SavedKey::Current(k) => host.store_current(store, &id, k),
+        SavedKey::Pending(k) => host.store_pending(store, &id, k),
+    }
+    .map_err(ApplyError::Host)?;
+    if let Some(s) = &c.state {
+        host.write_state(s).map_err(ApplyError::Host)?;
+    }
+    Ok(c)
+}
+
+/// Writes the first state of a client that holds none, after `vault setup`: the secret key the
+/// procedure gives ([`SecretKeyChange::Replace`]), then the state. Call it under the host's
+/// lock, after checking that no state is stored. A finished procedure without a state writes
+/// nothing. Any other secret key change is refused before any write, because only a client that
+/// holds a state has a pending key.
+///
+/// When the state write fails after the key write, the key write has already been issued: a
+/// transactional host discards every queued write when the call returns an error, and a host
+/// that writes straight to storage keeps a current key with no state, which the next setup
+/// overwrites.
+pub fn apply_first<T, H: CommitHost>(
+    finished: &Finished<T>,
+    host: &mut H,
+) -> Result<Option<Applied<H::Error>>, ApplyError<H::Error>> {
+    let Some(state) = &finished.state else {
+        return Ok(None);
+    };
+    match &finished.secret_key {
+        Some(SecretKeyChange::Replace(k)) => host
+            .store_current(state.secret_key_store, &state.vault_id, k)
+            .map_err(ApplyError::Host)?,
+        None => {}
+        Some(_) => return Err(ApplyError::Client(ClientError::UnexpectedInput)),
+    }
+    host.write_state(state).map_err(ApplyError::Host)?;
+    Ok(Some(Applied {
+        commit: Commit {
+            state: Some(state.clone()),
+            merged_local_changes: false,
+            expired: Vec::new(),
+        },
+        pending_left: None,
     }))
 }

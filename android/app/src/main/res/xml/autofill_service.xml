@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- No compatibility packages: compatibility-mode requests are refused (docs/android.md, Autofill). -->
+<autofill-service xmlns:android="http://schemas.android.com/apk/res/android" />

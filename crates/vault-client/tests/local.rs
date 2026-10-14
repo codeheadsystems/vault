@@ -4,10 +4,12 @@
 mod common;
 
 use common::*;
-use vault_client::commit::{ApplyError, CommitHost, apply};
+use vault_client::commit::{ApplyError, CommitHost, apply, apply_first, apply_save};
 use vault_client::edit::{EditError, local_edit};
 use vault_client::items::{apply_changes, in_folder, matches_text, sorted};
-use vault_client::{ClientError, ClientState, Finished, SecretKeyChange, SecretKeyStore};
+use vault_client::{
+    ClientError, ClientState, Finished, Save, SavedKey, SecretKeyChange, SecretKeyStore,
+};
 use vault_core::body::{Body, CustomField, HistoryEntry, Item, ItemData, LoginUri, TYPE_LOGIN};
 use vault_core::file::{open_file, read_header};
 use vault_core::header::HEADER_LEN;
@@ -72,6 +74,15 @@ impl CommitHost for Recorder {
     ) -> Result<(), &'static str> {
         assert_eq!(key.expose(), &[9; 16]);
         self.call("store_current", store, vault_id)
+    }
+
+    fn store_pending(
+        &mut self,
+        store: SecretKeyStore,
+        vault_id: &[u8; 16],
+        _: &SecretKey,
+    ) -> Result<(), &'static str> {
+        self.call("store_pending", store, vault_id)
     }
 
     fn copy_pending_to_current(
@@ -576,4 +587,129 @@ fn login_data_comes_from_the_current_item_unless_both_sides_have_it() {
     current.login.as_mut().unwrap().password = "current".into();
     let out = apply_changes(&note, &note, &current);
     assert_eq!(out.login.as_ref().unwrap().password, "current");
+}
+
+/// A `--new-secret-key` save of `started`: the state records the pending key.
+fn pending_save(slot: fn(SecretKey) -> SavedKey) -> Save {
+    let mut state = started();
+    state.pending_secret_key = true;
+    Save {
+        state,
+        secret_key: slot(key()),
+        vault_key: Fixture::new(3).key(),
+    }
+}
+
+fn save_with(
+    save: &Save,
+    on_disk: &ClientState,
+    host: &mut Recorder,
+) -> Result<(), ApplyError<&'static str>> {
+    apply_save(save, &started(), on_disk, T0, &mut TestRng(1), host).map(|_| ())
+}
+
+#[test]
+fn a_save_writes_the_key_then_the_state() {
+    for (slot, call) in [
+        (
+            SavedKey::Pending as fn(SecretKey) -> SavedKey,
+            "store_pending",
+        ),
+        (SavedKey::Current, "store_current"),
+    ] {
+        let save = pending_save(slot);
+        let mut host = Recorder::new(&save.state);
+        save_with(&save, &started(), &mut host).unwrap();
+        assert_eq!(host.calls, [call, "write_state"]);
+        assert!(host.written.as_ref() == Some(&save.state));
+    }
+}
+
+#[test]
+fn a_failed_key_write_writes_nothing_else() {
+    let save = pending_save(SavedKey::Pending);
+    let mut host = Recorder::failing(&save.state, "store_pending");
+    assert!(matches!(
+        save_with(&save, &started(), &mut host),
+        Err(ApplyError::Host("store_pending"))
+    ));
+    assert_eq!(host.calls, ["store_pending"]);
+    assert!(host.written.is_none());
+}
+
+#[test]
+fn a_superseded_save_is_refused_before_any_write() {
+    let save = pending_save(SavedKey::Pending);
+    // Another sync committed a newer generation while the credential change ran.
+    let mut on_disk = started();
+    on_disk.accepted = Some(Accepted {
+        generation: 9,
+        file_hash: [7; 32],
+    });
+    let mut host = Recorder::new(&save.state);
+    assert!(matches!(
+        save_with(&save, &on_disk, &mut host),
+        Err(ApplyError::Client(ClientError::Superseded))
+    ));
+    assert!(
+        host.calls.is_empty(),
+        "the commit rule runs before the key write"
+    );
+}
+
+#[test]
+fn a_failed_state_write_after_the_key_is_reported_with_the_key_written() {
+    let save = pending_save(SavedKey::Pending);
+    let mut host = Recorder::failing(&save.state, "write_state");
+    assert!(matches!(
+        save_with(&save, &started(), &mut host),
+        Err(ApplyError::Host("write_state"))
+    ));
+    // The key write was issued: a transactional host discards it, a file host keeps an unused
+    // pending key that no state names.
+    assert_eq!(host.calls, ["store_pending", "write_state"]);
+    assert!(host.written.is_none());
+}
+
+#[test]
+fn a_first_state_writes_the_key_then_the_state() {
+    let f = finished(Some(SecretKeyChange::Replace(key())));
+    let mut host = Recorder::new(f.state.as_ref().unwrap());
+    let a = apply_first(&f, &mut host).unwrap().expect("written");
+    assert_eq!(host.calls, ["store_current", "write_state"]);
+    assert!(a.commit.state == f.state && host.written == f.state);
+
+    // A crash between the key and the state: the key write was issued, the state was not.
+    let mut host = Recorder::failing(f.state.as_ref().unwrap(), "write_state");
+    assert!(matches!(
+        apply_first(&f, &mut host),
+        Err(ApplyError::Host("write_state"))
+    ));
+    assert_eq!(host.calls, ["store_current", "write_state"]);
+    assert!(host.written.is_none());
+
+    // No state, nothing written.
+    let mut none = finished(None);
+    none.state = None;
+    let mut host = Recorder::new(&started());
+    assert!(apply_first(&none, &mut host).unwrap().is_none());
+    assert!(host.calls.is_empty());
+}
+
+#[test]
+fn a_first_state_refuses_pending_key_changes_before_any_write() {
+    for change in [
+        SecretKeyChange::PromotePending,
+        SecretKeyChange::DiscardPending,
+        SecretKeyChange::ReplaceAndDiscardPending(key()),
+    ] {
+        let f = finished(Some(change));
+        let mut host = Recorder::new(f.state.as_ref().unwrap());
+        assert!(matches!(
+            apply_first(&f, &mut host),
+            Err(ApplyError::Client(ClientError::UnexpectedInput))
+        ));
+        assert!(host.calls.is_empty());
+        assert!(host.written.is_none());
+    }
 }

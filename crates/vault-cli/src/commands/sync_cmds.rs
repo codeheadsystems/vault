@@ -9,7 +9,7 @@ use crate::session::{
     self, Ctx, OsRng, Session, ask, client_error, drive, finish, no_save, now_ms, sender,
 };
 use crate::store;
-use crate::sys::{agent, prompt, secrets};
+use crate::sys::{agent, prompt};
 use vault_client::passwd::{PasswdChange, PasswdOptions};
 use vault_client::restore::{RestoreScope, fetch_revision, restore_preview};
 use vault_client::revisions::{RevisionInfo, parse_revisions};
@@ -254,18 +254,8 @@ pub fn passwd(
                 None,
             )?;
             let lock = store::lock(&ctx.paths)?;
-            secrets::store(
-                &ctx.paths,
-                save.state.secret_key_store,
-                &save.state.vault_id,
-                secrets::Slot::Pending,
-                save.secret_key.key(),
-            )?;
             let on_disk = store::require_state(&ctx.paths)?;
-            let c = save.commit(&started, &on_disk, now_ms(), &mut OsRng)?;
-            if let Some(st) = &c.state {
-                store::write_state(&ctx.paths, &lock, st)?;
-            }
+            session::apply_save(&ctx.paths, &lock, &save, &started, &on_disk)?;
             started = save.state;
             Ok(())
         };

@@ -214,6 +214,35 @@ pub fn commit<T>(
     }
 }
 
+/// Carries out a save under `lock`, with `on_disk` read under it: the key in its slot, then the
+/// commit rule, then the state (`vault_client::commit::apply_save`).
+pub fn apply_save(
+    paths: &Paths,
+    lock: &store::Lock,
+    save: &Save,
+    started: &ClientState,
+    on_disk: &ClientState,
+) -> Result<Commit> {
+    let mut host = Host { paths, lock };
+    vault_client::commit::apply_save(save, started, on_disk, now_ms(), &mut OsRng, &mut host)
+        .map_err(|e| match e {
+            ApplyError::Client(e) => e.into(),
+            ApplyError::Host(e) => e,
+        })
+}
+
+/// Writes the first state of this device under `lock`, after `vault setup`: the secret key,
+/// then the state (`vault_client::commit::apply_first`).
+pub fn apply_first<T>(paths: &Paths, lock: &store::Lock, f: &Finished<T>) -> Result<()> {
+    let mut host = Host { paths, lock };
+    vault_client::commit::apply_first(f, &mut host)
+        .map(|_| ())
+        .map_err(|e| match e {
+            ApplyError::Client(e) => e.into(),
+            ApplyError::Host(e) => e,
+        })
+}
+
 /// The data directory and its secret key store, as the commit writes them under the lock.
 struct Host<'a> {
     paths: &'a Paths,
@@ -230,6 +259,15 @@ impl CommitHost for Host<'_> {
         key: &SecretKey,
     ) -> Result<()> {
         secrets::store(self.paths, kind, vault_id, secrets::Slot::Current, key)
+    }
+
+    fn store_pending(
+        &mut self,
+        kind: SecretKeyStore,
+        vault_id: &[u8; 16],
+        key: &SecretKey,
+    ) -> Result<()> {
+        secrets::store(self.paths, kind, vault_id, secrets::Slot::Pending, key)
     }
 
     fn copy_pending_to_current(&mut self, kind: SecretKeyStore, vault_id: &[u8; 16]) -> Result<()> {
@@ -861,5 +899,102 @@ mod tests {
             assert!(c.state.is_none());
             assert!(store::require_state(&paths).unwrap() == on_disk);
         }
+    }
+
+    fn temp_paths() -> (tempfile::TempDir, Paths) {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = Paths {
+            data: dir.path().to_owned(),
+            config: dir.path().join("config.toml"),
+            runtime: None,
+        };
+        (dir, paths)
+    }
+
+    fn slot(paths: &Paths, s: secrets::Slot) -> Option<[u8; 16]> {
+        secrets::load(paths, SecretKeyStore::File, &[1; 16], s)
+            .unwrap()
+            .map(|k| *k.expose())
+    }
+
+    fn pending_save() -> Save {
+        let mut saved = state(2);
+        saved.pending_secret_key = true;
+        Save {
+            state: saved,
+            secret_key: vault_client::SavedKey::Pending(SecretKey::from_bytes([5; 16])),
+            vault_key: VaultKey::from_bytes([6; 32]),
+        }
+    }
+
+    #[test]
+    fn a_save_stores_the_pending_key_then_the_state() {
+        let (_dir, paths) = temp_paths();
+        let lock = store::lock(&paths).unwrap();
+        store::write_state(&paths, &lock, &state(2)).unwrap();
+        let save = pending_save();
+        let on_disk = store::require_state(&paths).unwrap();
+        apply_save(&paths, &lock, &save, &state(2), &on_disk).unwrap();
+        assert_eq!(slot(&paths, secrets::Slot::Pending), Some([5; 16]));
+        assert_eq!(slot(&paths, secrets::Slot::Current), None);
+        assert!(store::require_state(&paths).unwrap() == save.state);
+    }
+
+    #[test]
+    fn a_superseded_save_writes_nothing() {
+        let (_dir, paths) = temp_paths();
+        let lock = store::lock(&paths).unwrap();
+        // Another sync committed generation 3 while the credential change ran from 2.
+        store::write_state(&paths, &lock, &state(3)).unwrap();
+        let on_disk = store::require_state(&paths).unwrap();
+        let e = apply_save(&paths, &lock, &pending_save(), &state(2), &on_disk)
+            .err()
+            .expect("superseded");
+        assert_eq!(e.code(), ClientError::Superseded.code());
+        assert_eq!(
+            slot(&paths, secrets::Slot::Pending),
+            None,
+            "no key before the rule"
+        );
+        assert!(store::require_state(&paths).unwrap() == state(3));
+    }
+
+    fn first(change: Option<vault_client::SecretKeyChange>) -> Finished<()> {
+        Finished {
+            result: Ok(()),
+            state: Some(state(1)),
+            vault_key: None,
+            started_vault_key: None,
+            secret_key: change,
+        }
+    }
+
+    #[test]
+    fn setup_writes_the_key_then_the_first_state() {
+        use vault_client::SecretKeyChange::{
+            DiscardPending, PromotePending, Replace, ReplaceAndDiscardPending,
+        };
+        let (_dir, paths) = temp_paths();
+        let lock = store::lock(&paths).unwrap();
+        for refused in [
+            PromotePending,
+            DiscardPending,
+            ReplaceAndDiscardPending(SecretKey::from_bytes([8; 16])),
+        ] {
+            assert!(apply_first(&paths, &lock, &first(Some(refused))).is_err());
+            assert!(
+                store::read_state(&paths).unwrap().is_none(),
+                "nothing written"
+            );
+            assert_eq!(slot(&paths, secrets::Slot::Current), None);
+        }
+        apply_first(
+            &paths,
+            &lock,
+            &first(Some(Replace(SecretKey::from_bytes([4; 16])))),
+        )
+        .unwrap();
+        assert_eq!(slot(&paths, secrets::Slot::Current), Some([4; 16]));
+        assert!(store::require_state(&paths).unwrap() == state(1));
     }
 }

@@ -12,7 +12,7 @@ and its recent revisions, and never holds a key.
 | 1 | Format spec, `vault-core`, and test vectors | Done |
 | 2 | `vault serve` and the command-line client, with Bitwarden import and export | Done; in trial use |
 | 3 | Firefox extension | Built; signing and trial use pending |
-| 4 | Android app | Designed; in implementation |
+| 4 | Android app | Built; checks on a real phone and trial use pending |
 | 5 | TOTP (v1.1), then WebAuthn passkeys (v1.2) | Not started |
 
 The format is not yet frozen for a release. Bitwarden stays the primary password manager until
@@ -44,6 +44,8 @@ v1.0.
 | `crates/vault-server/` | `vault serve` |
 | `crates/vault-wasm/` | WebAssembly bindings for the Firefox extension |
 | `extension/` | The Firefox extension |
+| `crates/vault-android/` | UniFFI bindings for the Android app |
+| `android/` | The Android app |
 | `crates/vault-cli/` | The `vault` binary: the command-line client, its agent, and `vault serve` |
 | `spec/` | The normative format spec and known-answer test vectors |
 | `tools/` | An independent Python check of the test vectors, and a Bitwarden fixture generator |

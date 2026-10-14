@@ -188,8 +188,13 @@ type Applied = { written: boolean; superseded: boolean; mergedLocalChanges: bool
   `master_password_and_secret_key`, `secretKey` for `secret_key`, `vaultId` for `kit_vault_id`,
   `confirmed` for `confirm`, and `declined: true` to decline any of them.
 - A `save` step carries the state and, for the kit, the secret key's text form. The caller shows
-  the kit, confirms it was kept, runs `applySave` (which stores the key in the named slot and
-  writes the state), and answers `{ type: "saved" }`.
+  the kit, confirms it was kept, runs `applySave`, and answers `{ type: "saved" }`. `applySave`
+  runs the commit rule first, which writes nothing, then stores the key in the named slot, then
+  writes the state.
+- The host contract for `applySave` and `apply`: when either throws, the host discards every
+  write it queued during the call, by aborting the IndexedDB transaction. A throw can follow a
+  key write already queued, for example when `writeState` fails, so committing the transaction
+  after a throw could store a key that no state names.
 - `result` on success: `sync` gives `{ outcome: "up_to_date" | "adopted" | "pushed", generation,
   expired, credentialsChanged, pendingSecretKey: "landed" | "not_landed" | null }`; `unlock` gives
   `{ sync: <sync result> | { error } }`; `recover` gives `{ generation, revision, expired,

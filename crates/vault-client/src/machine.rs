@@ -434,3 +434,74 @@ impl<T: 'static> Machine<T> {
         }
     }
 }
+
+impl<T> Finished<T> {
+    /// The same end with its result mapped by `f`.
+    pub fn map<R>(self, f: impl FnOnce(T) -> R) -> Finished<R> {
+        Finished {
+            result: self.result.map(f),
+            state: self.state,
+            vault_key: self.vault_key,
+            started_vault_key: self.started_vault_key,
+            secret_key: self.secret_key,
+        }
+    }
+}
+
+impl<T> Step<T> {
+    /// The same step, with the result of a [`Step::Done`] mapped by `f`.
+    pub fn map<R>(self, f: impl FnOnce(T) -> R) -> Step<R> {
+        match self {
+            Step::Request(r) => Step::Request(r),
+            Step::Prompt(p) => Step::Prompt(p),
+            Step::Save(s) => Step::Save(s),
+            Step::Done(d) => Step::Done(d.map(f)),
+        }
+    }
+}
+
+/// The two calls a running machine answers, whatever its result type.
+trait Erased<R>: Send {
+    fn start(&mut self, now: u64) -> Step<R>;
+    fn step(&mut self, input: Input, now: u64) -> Step<R>;
+}
+
+struct Mapped<T, R> {
+    machine: Machine<T>,
+    map: fn(T) -> R,
+}
+
+impl<T: 'static, R> Erased<R> for Mapped<T, R> {
+    fn start(&mut self, now: u64) -> Step<R> {
+        self.machine.start(now).map(self.map)
+    }
+
+    fn step(&mut self, input: Input, now: u64) -> Step<R> {
+        self.machine.step(input, now).map(self.map)
+    }
+}
+
+/// A machine whose result is mapped into one type `R`, so a binding can hold any procedure
+/// behind one type. It steps like [`Machine`].
+pub struct AnyMachine<R> {
+    inner: Box<dyn Erased<R>>,
+}
+
+impl<R: 'static> AnyMachine<R> {
+    /// Wraps `machine`, mapping its result with `map`.
+    pub fn new<T: 'static>(machine: Machine<T>, map: fn(T) -> R) -> AnyMachine<R> {
+        AnyMachine {
+            inner: Box::new(Mapped { machine, map }),
+        }
+    }
+
+    /// Runs the procedure up to its first exchange.
+    pub fn start(&mut self, now: u64) -> Step<R> {
+        self.inner.start(now)
+    }
+
+    /// Feeds the input for the previous step and runs up to the next exchange.
+    pub fn step(&mut self, input: Input, now: u64) -> Step<R> {
+        self.inner.step(input, now)
+    }
+}

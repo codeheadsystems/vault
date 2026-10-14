@@ -2,10 +2,15 @@
 //! what a submitted form offers to save. The inputs are plain data, so the Firefox (WASM) and
 //! Android clients run the same code; the host supplies the known public suffix of a host from
 //! its platform's copy of the Public Suffix List.
+//!
+//! A [`Page`] is a Firefox page URL, an Android web page from an allowlisted browser, or an
+//! Android app page. The functions that take a page URL as text are the Firefox (web) forms of
+//! [`page_candidates`] and [`page_save_offer`].
 
 use std::net::{Ipv4Addr, Ipv6Addr};
 use url::{Host, Url};
-use vault_core::body::{Item, MatchMode};
+use vault_core::body::{AndroidApp, Item, MatchMode};
+use vault_core::json::Map;
 
 /// The host's Public Suffix List lookup.
 pub trait SuffixList {
@@ -276,32 +281,39 @@ pub fn match_uri(
     }
 }
 
-/// An item's outcome: the best of its URIs; `None` for an item that is not a login or has no
-/// URIs.
-pub fn item_outcome(page: &Prepared, item: &Item, suffixes: &dyn SuffixList) -> Outcome {
-    item.login().map_or(Outcome::None, |l| {
-        l.uris
-            .iter()
-            .map(|u| match_uri(page, &u.uri, u.match_mode(), suffixes))
-            .max()
-            .unwrap_or(Outcome::None)
-    })
+/// An item's outcome against a page: for a web page, the best of its URIs (`None` for an item
+/// that is not a login or has no URIs); for an app page, the outcome of its [`AppMatch`].
+pub fn item_outcome(page: &Page, item: &Item, suffixes: &dyn SuffixList) -> Outcome {
+    match page {
+        Page::App(app) => app_match(item, app).map_or(Outcome::None, AppMatch::outcome),
+        Page::Web(p) | Page::AndroidWeb(p) => {
+            let android = matches!(page, Page::AndroidWeb(_));
+            item.login().map_or(Outcome::None, |l| {
+                l.uris
+                    .iter()
+                    .map(|u| match prepare_uri(&u.uri) {
+                        Some(i) if android => match_android(p, &i, u.match_mode(), suffixes),
+                        Some(i) => match_prepared(p, &i, u.match_mode(), suffixes),
+                        None => Outcome::None,
+                    })
+                    .max()
+                    .unwrap_or(Outcome::None)
+            })
+        }
+    }
 }
 
-/// The candidates for a fill on `page_url`: the items whose outcome is not `None`, `Fill` first,
-/// then by `name` compared as Unicode code points, then by `id`. Empty when the URL is not a
-/// page URL.
-pub fn candidates<'a>(
-    page_url_text: &str,
+/// The candidates for a fill on `page`: the items whose outcome is not `None`, `Fill` first, then
+/// by `name` compared as Unicode code points, then by `id`. For an app page these are exactly
+/// the items with an association with the app.
+pub fn page_candidates<'a>(
+    page: &Page,
     items: &'a [Item],
     suffixes: &dyn SuffixList,
 ) -> Vec<(&'a Item, Outcome)> {
-    let Some(page) = page_url(page_url_text) else {
-        return Vec::new();
-    };
     let mut out: Vec<(&Item, Outcome)> = items
         .iter()
-        .map(|i| (i, item_outcome(&page, i, suffixes)))
+        .map(|i| (i, item_outcome(page, i, suffixes)))
         .filter(|(_, o)| *o != Outcome::None)
         .collect();
     out.sort_by(|(a, oa), (b, ob)| {
@@ -310,6 +322,19 @@ pub fn candidates<'a>(
             .then_with(|| a.id.cmp(&b.id))
     });
     out
+}
+
+/// The candidates for a fill on the Firefox page URL `page_url_text`, as [`page_candidates`]
+/// gives them for a web page. Empty when the URL is not a page URL.
+pub fn candidates<'a>(
+    page_url_text: &str,
+    items: &'a [Item],
+    suffixes: &dyn SuffixList,
+) -> Vec<(&'a Item, Outcome)> {
+    match page_url(page_url_text) {
+        Some(p) => page_candidates(&Page::Web(p), items, suffixes),
+        None => Vec::new(),
+    }
 }
 
 fn name(i: &Item) -> &str {
@@ -330,7 +355,7 @@ pub fn frames_to_fill(top_url: &str, frames: &[(u64, &str)]) -> Vec<u64> {
         .collect()
 }
 
-/// What a submitted form offers to save.
+/// What a submitted form on a Firefox page offers to save.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SaveOffer {
     /// Nothing to offer.
@@ -350,7 +375,8 @@ pub enum SaveOffer {
     },
 }
 
-/// The save offer for a form submitted on `page_url_text` with `username` and `password`.
+/// The save offer for a form submitted on the Firefox page URL `page_url_text` with `username`
+/// and `password`, as [`page_save_offer`] gives it for a web page.
 pub fn save_offer(
     page_url_text: &str,
     username: &str,
@@ -361,10 +387,372 @@ pub fn save_offer(
     let Some(page) = page_url(page_url_text) else {
         return SaveOffer::None;
     };
-    if password.is_empty() {
-        return SaveOffer::None;
+    match page_save_offer(&Page::Web(page), username, password, items, suffixes) {
+        Offer::None => SaveOffer::None,
+        Offer::Update { id } => SaveOffer::Update { id },
+        Offer::New(mut n) => SaveOffer::New {
+            name: std::mem::take(&mut n.name),
+            uri: n.uris.pop().map(|u| u.uri).unwrap_or_default(),
+        },
     }
-    let same_user: Vec<&Item> = candidates(page_url_text, items, suffixes)
+}
+
+/// A page the matching rules see.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Page {
+    /// A Firefox page URL, from [`page_url`].
+    Web(Prepared),
+    /// An Android web page from an allowlisted browser, from [`android_web_page`]: no port, and
+    /// the path `/`.
+    AndroidWeb(Prepared),
+    /// An Android app that is not an allowlisted browser.
+    App(AppPage),
+}
+
+/// The Android web page for the scheme and host an allowlisted browser reports: the URL
+/// `<scheme>://<host>/` parsed as a page URL. `None` when the scheme is not `http` or `https`,
+/// when the host is not a host alone (it contains `/`, `\`, `?`, `#`, `@`, `:`, ASCII whitespace,
+/// or a control character, except `:` inside an IPv6 address in brackets), or when it does not
+/// parse; the client then treats the browser as not allowlisted. A host with a port, the default
+/// included, is not a host alone, because Android browsers never report one.
+pub fn android_web_page(scheme: &str, host: &str) -> Option<Prepared> {
+    if !matches!(scheme, "http" | "https") {
+        return None;
+    }
+    // The URL parser absorbs a stray `/`, `\`, `@`, or a trailing `:` into another part of the
+    // URL, so the host is checked as text first.
+    let bracketed = host.len() > 2 && host.starts_with('[') && host.ends_with(']');
+    let inner = if bracketed {
+        &host[1..host.len() - 1]
+    } else {
+        host
+    };
+    let forbidden = |c: char| {
+        matches!(c, '/' | '\\' | '?' | '#' | '@' | '[' | ']')
+            || (c == ':' && !bracketed)
+            || c == ' '
+            || c.is_control()
+    };
+    if inner.is_empty() || inner.chars().any(forbidden) {
+        return None;
+    }
+    let u = Url::parse(&format!("{scheme}://{host}/")).ok()?;
+    let plain = u.port().is_none()
+        && u.path() == "/"
+        && u.query().is_none()
+        && u.fragment().is_none()
+        && u.username().is_empty()
+        && u.password().is_none();
+    plain.then(|| Prepared::from_url(&u)).flatten()
+}
+
+/// An item URI against an Android web page (spec, Android web pages), with the scheme rule
+/// applied.
+fn match_android(
+    page: &Prepared,
+    item: &Prepared,
+    mode: MatchMode,
+    suffixes: &dyn SuffixList,
+) -> Outcome {
+    let (Ok(page_suffix), Ok(item_suffix)) = (
+        host_suffix(&page.host, suffixes),
+        host_suffix(&item.host, suffixes),
+    ) else {
+        return Outcome::None;
+    };
+    let page_local = local(&page.host, page_suffix.as_deref());
+    let same_host = page.host == item.host;
+    let by_mode = match mode {
+        MatchMode::BaseDomain
+            if registrable(&page.host, page_suffix.as_deref())
+                == registrable(&item.host, item_suffix.as_deref()) =>
+        {
+            Outcome::Fill
+        }
+        MatchMode::Host if same_host && item.port.is_none() && !page_local => Outcome::Fill,
+        MatchMode::Host if same_host => Outcome::Confirm,
+        MatchMode::StartsWith | MatchMode::Exact if same_host && page.scheme == item.scheme => {
+            Outcome::Confirm
+        }
+        _ => Outcome::None,
+    };
+    if by_mode == Outcome::None || !(item.scheme == "https" && page.scheme == "http") {
+        by_mode
+    } else if page_local {
+        Outcome::Confirm
+    } else {
+        Outcome::None
+    }
+}
+
+/// An Android app page: the requesting app's package name and its signing certificates. It is
+/// built only through [`AppPage::new`], which checks the digests and the history.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AppPage {
+    package: String,
+    signers: Vec<String>,
+    history: Vec<String>,
+    multiple_signers: bool,
+}
+
+/// Why [`AppPage::new`] refused a page.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BadAppPage {
+    /// The package name is empty.
+    Package,
+    /// A digest is not 64 lowercase hex characters.
+    Digest,
+    /// An app without multiple signers lists more than one current digest.
+    Signers,
+    /// The history does not fit the signers: for one signer it is empty or does not end with the
+    /// current digest; for more than one signer, or none read, it is not empty.
+    History,
+}
+
+impl AppPage {
+    /// An app page from what Android reports (spec, App pages): every digest 64 lowercase hex
+    /// characters; with one signer, a history that ends with its digest; with more than one
+    /// signer, or when the signing information could not be read (no signers), no history.
+    /// Clients build pages through this constructor.
+    pub fn new(
+        package: String,
+        signers: Vec<String>,
+        history: Vec<String>,
+        multiple_signers: bool,
+    ) -> Result<AppPage, BadAppPage> {
+        let digest = |d: &String| {
+            d.len() == 64
+                && d.bytes()
+                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+        };
+        if package.is_empty() {
+            return Err(BadAppPage::Package);
+        }
+        if !signers.iter().chain(&history).all(digest) {
+            return Err(BadAppPage::Digest);
+        }
+        let history_fits = match (multiple_signers, signers.as_slice()) {
+            (false, [one]) => history.last() == Some(one),
+            (false, []) | (true, _) => history.is_empty(),
+            (false, _) => return Err(BadAppPage::Signers),
+        };
+        if !history_fits {
+            return Err(BadAppPage::History);
+        }
+        Ok(AppPage {
+            package,
+            signers,
+            history,
+            multiple_signers,
+        })
+    }
+
+    /// The package name.
+    pub fn package(&self) -> &str {
+        &self.package
+    }
+
+    /// The current signing certificate digests (SHA-256 of the DER encoding, 64 lowercase hex
+    /// characters): one for an app with one signer, several for an app with more than one, and
+    /// none when the signing information could not be read.
+    pub fn signers(&self) -> &[String] {
+        &self.signers
+    }
+
+    /// The signing certificate history, oldest first and ending with the current digest, for an
+    /// app with one signer; empty otherwise.
+    pub fn history(&self) -> &[String] {
+        &self.history
+    }
+
+    /// Whether the app has more than one signer.
+    pub fn multiple_signers(&self) -> bool {
+        self.multiple_signers
+    }
+
+    /// The one current digest, unless the app has more than one signer or none could be read.
+    pub fn current(&self) -> Option<&str> {
+        match self.signers.as_slice() {
+            [one] if !self.multiple_signers => Some(one),
+            _ => None,
+        }
+    }
+
+    fn unbound(&self, uri: &str) -> bool {
+        let t = uri.trim_matches(|c: char| c.is_ascii_whitespace());
+        t.get(..13)
+            .is_some_and(|p| p.eq_ignore_ascii_case("androidapp://"))
+            && t[13..] == *self.package
+    }
+}
+
+/// How an item's association with an app page fills, in order of precedence (spec, App pages).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AppMatch {
+    /// A bound association whose certificate is the app's current one: fills.
+    Fill,
+    /// A bound association whose certificate is in the app's signing history: confirms, and a
+    /// confirmed fill moves the association to the current certificate.
+    Rebind,
+    /// A bound association whose certificate is not in the history: confirms with a warning that
+    /// the app's signature changed, and binds nothing.
+    SignatureChanged,
+    /// An unbound association: confirms, and a confirmed fill adds a bound association.
+    Bind,
+    /// The app has more than one signer, or its signing information could not be read: confirms
+    /// and never binds.
+    Unverified,
+}
+
+impl AppMatch {
+    /// `Fill` for [`AppMatch::Fill`], and `Confirm` for every other kind.
+    pub fn outcome(self) -> Outcome {
+        match self {
+            AppMatch::Fill => Outcome::Fill,
+            _ => Outcome::Confirm,
+        }
+    }
+
+    /// The kind's name, as `spec/vectors/autofill.json` spells it.
+    pub fn code(self) -> &'static str {
+        match self {
+            AppMatch::Fill => "fill",
+            AppMatch::Rebind => "rebind",
+            AppMatch::SignatureChanged => "signature_changed",
+            AppMatch::Bind => "bind",
+            AppMatch::Unverified => "unverified",
+        }
+    }
+}
+
+/// How `item` fills `app`, or `None` when the item has no association with the app: no bound
+/// association (`login.apps` entry for the package) and no unbound one (a `uris` entry
+/// `androidapp://<package>` whose mode is not `never`).
+pub fn app_match(item: &Item, app: &AppPage) -> Option<AppMatch> {
+    let login = item.login()?;
+    let bound: Vec<&str> = login
+        .apps
+        .iter()
+        .filter(|a| a.package == app.package)
+        .map(|a| a.cert_sha256.as_str())
+        .collect();
+    let unbound = login
+        .uris
+        .iter()
+        .any(|u| u.match_mode() != MatchMode::Never && app.unbound(&u.uri));
+    if bound.is_empty() && !unbound {
+        return None;
+    }
+    let Some(current) = app.current() else {
+        return Some(AppMatch::Unverified);
+    };
+    let in_history = |c: &str| app.history.iter().any(|h| h == c);
+    Some(if bound.contains(&current) {
+        AppMatch::Fill
+    } else if bound.iter().any(|c| in_history(c)) {
+        AppMatch::Rebind
+    } else if !bound.is_empty() {
+        AppMatch::SignatureChanged
+    } else {
+        AppMatch::Bind
+    })
+}
+
+/// The item's `login.apps` after a confirmed fill on `app`, or `None` when the fill records
+/// nothing. `Bind` adds an entry for the current certificate; `Rebind` moves each entry for the
+/// package whose certificate is in the history to the current one, and keeps only the first of
+/// any entries that became equal. The client applies the result as a local edit.
+pub fn apps_after_fill(item: &Item, app: &AppPage) -> Option<Vec<AndroidApp>> {
+    let kind = app_match(item, app)?;
+    let current = app.current()?;
+    let mut apps = item.login()?.apps.clone();
+    match kind {
+        AppMatch::Bind => apps.push(AndroidApp {
+            package: app.package.clone(),
+            cert_sha256: current.to_owned(),
+            extra: Map::new(),
+        }),
+        AppMatch::Rebind => {
+            // Rewrite the entries in the history, then drop each rewritten entry that has the
+            // same package and digest as an entry before it. Entries not rewritten stay as they
+            // are, duplicates included.
+            let mut out: Vec<AndroidApp> = Vec::with_capacity(apps.len());
+            for mut a in apps {
+                let rewritten = a.package == app.package && app.history.contains(&a.cert_sha256);
+                if rewritten {
+                    a.cert_sha256 = current.to_owned();
+                    if out
+                        .iter()
+                        .any(|b| b.package == a.package && b.cert_sha256 == a.cert_sha256)
+                    {
+                        continue;
+                    }
+                }
+                out.push(a);
+            }
+            apps = out;
+        }
+        _ => return None,
+    }
+    Some(apps)
+}
+
+/// A URI of a new login item: the `uri` and its `match` value.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NewUri {
+    /// The URI.
+    pub uri: String,
+    /// Its `match` value.
+    pub match_value: String,
+}
+
+/// A bound association of a new login item.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NewApp {
+    /// The package name.
+    pub package: String,
+    /// The signing certificate digest.
+    pub cert_sha256: String,
+}
+
+/// A new login item a save offer proposes, besides the submitted username and password.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NewLogin {
+    /// The item's name.
+    pub name: String,
+    /// Its `login.uris`.
+    pub uris: Vec<NewUri>,
+    /// Its `login.apps`.
+    pub apps: Vec<NewApp>,
+}
+
+/// What a submitted form on any page offers to save.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Offer {
+    /// Nothing to offer.
+    None,
+    /// Update the password of the item with this `id`.
+    Update {
+        /// The item's `id`.
+        id: String,
+    },
+    /// Save a new login item.
+    New(NewLogin),
+}
+
+/// The save offer for a form submitted on `page` with `username` and `password` (spec, Save
+/// offers and Android save offers).
+pub fn page_save_offer(
+    page: &Page,
+    username: &str,
+    password: &str,
+    items: &[Item],
+    suffixes: &dyn SuffixList,
+) -> Offer {
+    if password.is_empty() {
+        return Offer::None;
+    }
+    let same_user: Vec<&Item> = page_candidates(page, items, suffixes)
         .into_iter()
         .filter(|(_, o)| *o == Outcome::Fill)
         .map(|(i, _)| i)
@@ -374,13 +762,37 @@ pub fn save_offer(
         .iter()
         .any(|i| i.login().is_some_and(|l| l.password == password))
     {
-        return SaveOffer::None;
+        return Offer::None;
     }
-    match same_user.first() {
-        Some(i) => SaveOffer::Update { id: i.id.clone() },
-        None => SaveOffer::New {
-            name: page.host.text(),
-            uri: page.origin(),
+    if let Some(i) = same_user.first() {
+        return Offer::Update { id: i.id.clone() };
+    }
+    Offer::New(match page {
+        Page::Web(p) | Page::AndroidWeb(p) => NewLogin {
+            name: p.host.text(),
+            uris: vec![NewUri {
+                uri: p.origin(),
+                match_value: "base_domain".into(),
+            }],
+            apps: Vec::new(),
         },
-    }
+        Page::App(app) => match app.current() {
+            Some(c) => NewLogin {
+                name: app.package.clone(),
+                uris: Vec::new(),
+                apps: vec![NewApp {
+                    package: app.package.clone(),
+                    cert_sha256: c.to_owned(),
+                }],
+            },
+            None => NewLogin {
+                name: app.package.clone(),
+                uris: vec![NewUri {
+                    uri: format!("androidapp://{}", app.package),
+                    match_value: "base_domain".into(),
+                }],
+                apps: Vec::new(),
+            },
+        },
+    })
 }
