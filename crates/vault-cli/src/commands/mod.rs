@@ -82,6 +82,18 @@ pub enum ClientCommand {
         #[arg(short = 'c', long = "copy")]
         copy: bool,
     },
+    /// Chooses an item in a launcher menu and copies its password
+    Pick {
+        /// Copies this value instead: username, password, totp, notes, uri, or a custom field
+        #[arg(long, value_name = "NAME", default_value = "password")]
+        field: String,
+        /// Prints the value instead of copying it, for a typing tool such as wtype or xdotool
+        #[arg(long)]
+        print: bool,
+        /// The launcher; without it, the first of fuzzel (Wayland only), rofi, and dmenu found
+        #[arg(long, value_enum)]
+        launcher: Option<PickLauncher>,
+    },
     /// Adds a login, or a note with --note
     Add(AddArgs),
     /// Edits an item in the editor
@@ -237,6 +249,27 @@ pub enum ExportFormat {
     Json,
 }
 
+/// The launchers of `vault pick`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum PickLauncher {
+    /// rofi
+    Rofi,
+    /// fuzzel
+    Fuzzel,
+    /// dmenu, which needs an unlocked agent
+    Dmenu,
+}
+
+impl From<PickLauncher> for crate::launcher::Launcher {
+    fn from(l: PickLauncher) -> Self {
+        match l {
+            PickLauncher::Rofi => Self::Rofi,
+            PickLauncher::Fuzzel => Self::Fuzzel,
+            PickLauncher::Dmenu => Self::Dmenu,
+        }
+    }
+}
+
 /// The shells of `vault completions`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum Shell {
@@ -344,6 +377,11 @@ fn dispatch(ctx: &Ctx, cmd: ClientCommand) -> Result<JsonResult> {
             field,
             copy,
         } => item_cmds::show(ctx, &item, reveal, field.as_deref(), copy),
+        C::Pick {
+            field,
+            print,
+            launcher,
+        } => item_cmds::pick(ctx, &field, print, launcher.map(Into::into)),
         C::Add(args) => item_cmds::add(ctx, &args),
         C::Edit { item } => item_cmds::edit(ctx, &item),
         C::Rm { item } => item_cmds::rm(ctx, &item),

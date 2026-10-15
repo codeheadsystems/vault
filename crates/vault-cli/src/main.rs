@@ -17,6 +17,8 @@ mod http;
 #[cfg(feature = "client")]
 mod items;
 #[cfg(feature = "client")]
+mod launcher;
+#[cfg(feature = "client")]
 mod output;
 #[cfg(feature = "client")]
 mod paths;

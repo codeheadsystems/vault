@@ -14,9 +14,11 @@ fn exit_of(code: u8) -> Exit {
 
 /// Prompts. Secrets other than the master password, lines, and confirmations come from the
 /// terminal when standard input is one, and otherwise from the next line of standard input. The
-/// master password comes from `--password-fd` when given, and otherwise from the terminal.
+/// master password comes from `--password-fd` when given, then from the launcher of `vault pick`,
+/// and otherwise from the terminal.
 pub mod prompt {
     use super::*;
+    use crate::launcher::Launcher;
     use crate::prompt::{PromptError, Prompter, stdin_line};
     use std::io::IsTerminal;
     use std::sync::Mutex;
@@ -25,6 +27,10 @@ pub mod prompt {
     struct State {
         prompter: Prompter,
         fd: bool,
+        /// The launcher of `vault pick`, which asks for the master password.
+        launcher: Option<Launcher>,
+        /// The last message [`say`] gave, shown with the launcher's next password prompt.
+        note: Option<String>,
     }
 
     static STATE: Mutex<Option<State>> = Mutex::new(None);
@@ -45,6 +51,8 @@ pub mod prompt {
         let s = g.get_or_insert_with(|| State {
             prompter: Prompter::new(None),
             fd: false,
+            launcher: None,
+            note: None,
         });
         f(s)
     }
@@ -60,8 +68,16 @@ pub mod prompt {
         *g = Some(State {
             prompter: Prompter::new(password_fd),
             fd: password_fd.is_some(),
+            launcher: None,
+            note: None,
         });
         Ok(())
+    }
+
+    /// Asks for the master password through `launcher` from now on, unless `--password-fd` is
+    /// given.
+    pub fn use_launcher(launcher: Launcher) {
+        with(|s| s.launcher = Some(launcher));
     }
 
     /// Whether the master password comes from `--password-fd`.
@@ -77,6 +93,11 @@ pub mod prompt {
     /// A message that goes with a prompt: to the terminal when standard input is one, and
     /// otherwise to standard error.
     pub fn say(text: &str) {
+        with(|s| {
+            if s.launcher.is_some() {
+                s.note = Some(text.to_owned());
+            }
+        });
         if stdin_is_terminal() {
             with(|s| s.prompter.say(&format!("{text}\n")));
         } else {
@@ -86,7 +107,14 @@ pub mod prompt {
 
     /// The master password.
     pub fn password(label: &str) -> Result<SecretString> {
-        with(|s| s.prompter.password(label)).map_err(error)
+        with(|s| match s.launcher {
+            Some(l) if !s.fd => {
+                let note = s.note.take();
+                l.password(label, note.as_deref())
+                    .map_err(super::launcher::error)
+            }
+            _ => s.prompter.password(label).map_err(error),
+        })
     }
 
     /// A secret line without echo: setup text, a secret key, or an export password.
@@ -121,6 +149,43 @@ pub mod prompt {
                 Err(e) => Err(error(e)),
             }
         }
+    }
+}
+
+/// The launchers of `vault pick`.
+pub mod launcher {
+    use super::*;
+    use crate::launcher::{Launcher, LauncherError};
+
+    /// The CLI error for a launcher failure.
+    pub fn error(e: LauncherError) -> CliError {
+        let code = match &e {
+            LauncherError::NotFound(_) => "picker.no_launcher",
+            LauncherError::NoPasswordMode(_) => "picker.no_password_mode",
+            LauncherError::Cancelled => "cancelled",
+            LauncherError::TooLong | LauncherError::NotUtf8 => "picker.bad_output",
+            LauncherError::Io(_) => "picker.launcher",
+        };
+        CliError::new(exit_of(e.exit_code()), code, e.to_string())
+    }
+
+    /// `chosen` when it is in `$PATH`, and otherwise the launcher detection finds.
+    pub fn choose(chosen: Option<Launcher>) -> Result<Launcher> {
+        let path = std::env::var_os("PATH");
+        match chosen {
+            Some(l) if l.found_in(path.as_ref()) => Ok(l),
+            Some(l) => Err(error(LauncherError::NotFound(Some(l)))),
+            None => {
+                let wayland = std::env::var_os("WAYLAND_DISPLAY").is_some_and(|v| !v.is_empty());
+                Launcher::detect(path.as_ref(), wayland)
+                    .ok_or_else(|| error(LauncherError::NotFound(None)))
+            }
+        }
+    }
+
+    /// The line the user chooses among `lines`.
+    pub fn menu(launcher: Launcher, lines: &[String]) -> Result<zeroize::Zeroizing<String>> {
+        launcher.menu("vault", lines).map_err(error)
     }
 }
 

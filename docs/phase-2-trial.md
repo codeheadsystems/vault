@@ -95,6 +95,7 @@ On the machine that stays on. When Firefox will later run on the same machine, a
 | Agent | `vault unlock`, then `vault ls` answers without a prompt; after 15 minutes idle it asks again; `vault lock` ends it at once |
 | Clipboard | `vault show -c <item>` pastes in another application; the clipboard manager (Klipper, GPaste, cliphist) does not record it; it is cleared after 45 s |
 | Clipboard | On Wayland and on X11, if both are in use |
+| Picker | `vault pick` from a desktop key binding with the launcher in use: while locked, the launcher asks for the master password with the typed text hidden, and says so after a wrong one; the chosen password pastes; Escape does nothing; with dmenu, a locked vault shows the "run vault unlock first" message |
 | Prompts | Ctrl-C at the master password prompt leaves the terminal echoing; Ctrl-Z at the prompt, then `fg`, prompts again without echo |
 | Editor | `vault edit <item>` with the usual `$EDITOR`; no swap, backup, or undo file appears in the editor's usual directories afterwards |
 | Sync | An edit on one device appears on the other after `vault sync`, or within 5 minutes with the agent unlocked |

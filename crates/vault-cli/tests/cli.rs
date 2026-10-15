@@ -1423,3 +1423,217 @@ fn an_unknown_item_type_shows_only_its_id_and_type_without_reveal() {
     a.run(&["--json", "--offline", "rm", &id[..8]], pw(&[PW]))
         .ok();
 }
+
+// ---------------------------------------------------------------------------------------------
+// Picker
+
+/// A directory of fake launchers for `vault pick`. Each logs its arguments to `log`, writes the
+/// menu it is given to `menu`, answers a password prompt with the next line of `passwords`, a
+/// menu with the contents of `pick`, and records error messages in `errors`. A missing answer
+/// file makes it exit with status 1, as closing a launcher does.
+struct FakeLaunchers {
+    dir: tempfile::TempDir,
+    path: String,
+}
+
+impl FakeLaunchers {
+    fn new(names: &[&str]) -> FakeLaunchers {
+        let dir = tempfile::tempdir().unwrap();
+        let script = r#"#!/bin/sh
+dir=$(dirname "$0")
+printf '%s\n' "$*" >> "$dir/log"
+case "$1" in -e) printf '%s\n' "$2" >> "$dir/errors"; exit 0;; esac
+case "$*" in *"vault:"*) cat >> "$dir/errors"; exit 0;; esac
+case " $* " in *" -password "*|*" --password "*)
+  [ -s "$dir/passwords" ] || exit 1
+  head -n 1 "$dir/passwords"; sed -i 1d "$dir/passwords"; exit 0;;
+esac
+cat > "$dir/menu"
+[ -f "$dir/pick" ] || exit 1
+cat "$dir/pick"
+"#;
+        for n in names {
+            let p = dir.path().join(n);
+            std::fs::write(&p, script).unwrap();
+            std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o700)).unwrap();
+        }
+        let path = format!(
+            "{}:{}",
+            dir.path().display(),
+            std::env::var("PATH").unwrap_or_default()
+        );
+        FakeLaunchers { dir, path }
+    }
+
+    fn answer(&self, file: &str, text: &str) {
+        std::fs::write(self.dir.path().join(file), text).unwrap();
+    }
+
+    fn read(&self, file: &str) -> String {
+        std::fs::read_to_string(self.dir.path().join(file)).unwrap_or_default()
+    }
+
+    /// Runs `vault <args>` with these launchers first in `$PATH`.
+    fn run(&self, d: &Device, args: &[&str], passwords: &[&str], env: &[(&str, &str)]) -> Run {
+        let mut all = vec![("PATH", self.path.as_str())];
+        all.extend_from_slice(env);
+        d.run(
+            args,
+            Input {
+                passwords,
+                env: &all,
+                ..Input::default()
+            },
+        )
+    }
+}
+
+/// A device with two logins, one in a folder, and a note.
+fn picker_device() -> (TestServer, Device) {
+    let (server, a, _, _) = one_device();
+    a.add("GitHub", "github-pw", &["--folder", "Work"]).ok();
+    a.add("Mail", "mail-pw", &[]).ok();
+    a.run(&["--json", "add", "Diary", "--note"], pw(&[PW])).ok();
+    (server, a)
+}
+
+#[test]
+fn pick_asks_for_the_password_in_the_launcher_and_prints_the_chosen_value() {
+    let (_server, a) = picker_device();
+    let l = FakeLaunchers::new(&["rofi"]);
+    l.answer("passwords", &format!("wrong password\n{PW}\n"));
+    l.answer("pick", "Work/GitHub  ned\n");
+    let r = l
+        .run(&a, &["pick", "--launcher", "rofi", "--print"], &[], &[])
+        .ok();
+    assert_eq!(r.stdout, "github-pw\n");
+    // Only logins with a password, in the order of `ls`; nothing secret in the menu.
+    assert_eq!(l.read("menu"), "Mail  ned\nWork/GitHub  ned\n");
+    let log = l.read("log");
+    assert!(
+        log.contains("-dmenu -password -p Master password\n"),
+        "{log}"
+    );
+    assert!(
+        log.contains("-password -p Master password -mesg Wrong master password."),
+        "the second prompt says the first was wrong: {log}"
+    );
+    assert!(log.contains("-dmenu -i -no-custom -p vault"), "{log}");
+    assert_eq!(l.read("errors"), "");
+
+    // Another field, as JSON, with the password from --password-fd instead of the launcher.
+    l.answer("pick", "Mail  ned\n");
+    let r = l
+        .run(
+            &a,
+            &[
+                "--json",
+                "pick",
+                "--launcher",
+                "rofi",
+                "--print",
+                "--field",
+                "username",
+            ],
+            &[PW],
+            &[],
+        )
+        .ok();
+    let res = r.result();
+    assert_eq!(res["value"], "ned");
+    assert!(res["id"].is_string());
+    assert!(
+        !l.read("log").ends_with("Master password\n"),
+        "no launcher prompt"
+    );
+}
+
+#[test]
+fn pick_cancels_quietly_and_shows_other_errors_in_the_launcher() {
+    let (_server, a) = picker_device();
+    let l = FakeLaunchers::new(&["fuzzel"]);
+    // Closing the menu cancels with exit code 1 and shows nothing.
+    let r = l.run(&a, &["--json", "pick", "--launcher", "fuzzel"], &[PW], &[]);
+    assert_eq!((r.code, r.error_code().as_str()), (1, "cancelled"));
+    let r = l.run(&a, &["pick", "--launcher", "fuzzel"], &[PW], &[]);
+    assert_eq!(r.code, 1);
+    assert_eq!(l.read("errors"), "");
+
+    // Text that matches no line selects nothing, is never echoed, and the error appears in the
+    // launcher because nothing reads standard error.
+    l.answer("pick", "typed-by-mistake-secret\n");
+    let r = l.run(&a, &["pick", "--launcher", "fuzzel"], &[PW], &[]);
+    assert_eq!(r.code, 3, "{r:#?}");
+    assert!(!r.stderr.contains("typed-by-mistake"), "{r:#?}");
+    assert_eq!(l.read("errors"), "vault: the selection matches no item\n");
+    // With --json the caller reads the error, so the launcher shows nothing more.
+    let r = l.run(&a, &["--json", "pick", "--launcher", "fuzzel"], &[PW], &[]);
+    assert_eq!(r.error_code(), "item.not_found");
+    assert_eq!(l.read("errors"), "vault: the selection matches no item\n");
+}
+
+#[test]
+fn pick_with_dmenu_needs_an_agent_and_detection_follows_the_display() {
+    let (_server, a) = picker_device();
+    let l = FakeLaunchers::new(&["dmenu", "fuzzel"]);
+    // dmenu cannot hide the master password.
+    let r = l.run(&a, &["--json", "pick", "--launcher", "dmenu"], &[], &[]);
+    assert_eq!(
+        (r.code, r.error_code().as_str()),
+        (4, "picker.no_password_mode")
+    );
+    // Under Wayland fuzzel comes first.
+    l.answer("passwords", &format!("{PW}\n"));
+    l.answer("pick", "Mail  ned\n");
+    let r = l
+        .run(
+            &a,
+            &["pick", "--print"],
+            &[],
+            &[("WAYLAND_DISPLAY", "wayland-test")],
+        )
+        .ok();
+    assert_eq!(r.stdout, "mail-pw\n");
+    assert!(
+        l.read("log").contains("--dmenu --password"),
+        "{}",
+        l.read("log")
+    );
+    // A launcher that is not installed is reported.
+    let empty = tempfile::tempdir().unwrap();
+    let r = a.run(
+        &["--json", "pick", "--launcher", "rofi"],
+        Input {
+            env: &[("PATH", empty.path().to_str().unwrap())],
+            ..Input::default()
+        },
+    );
+    assert_eq!((r.code, r.error_code().as_str()), (1, "picker.no_launcher"));
+}
+
+#[test]
+fn pick_with_dmenu_works_while_the_agent_holds_the_key() {
+    let server = TestServer::start(false);
+    let a = Device::with_agent(true);
+    if a.runtime.is_none() {
+        eprintln!("skipped: no /dev/shm for the runtime directory");
+        return;
+    }
+    a.init(&server.token("laptop"));
+    a.run(
+        &["--json", "add", "Mail", "--username", "ned"],
+        Input {
+            stdin: "mail-pw\n",
+            ..Input::default()
+        },
+    )
+    .ok();
+    let l = FakeLaunchers::new(&["dmenu"]);
+    l.answer("pick", "Mail  ned\n");
+    let r = l
+        .run(&a, &["pick", "--launcher", "dmenu", "--print"], &[], &[])
+        .ok();
+    assert_eq!(r.stdout, "mail-pw\n");
+    assert_eq!(l.read("log"), "-i -p vault\n", "no password prompt");
+    a.run(&["lock"], Input::default()).ok();
+}

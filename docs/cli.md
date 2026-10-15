@@ -23,6 +23,7 @@ reuse the same crate.
 | `vault ls [<folder>]` | Lists items, with `--review` only those a merge flagged |
 | `vault find <text>` | Searches names, folders, usernames, and URIs |
 | `vault show <item>` | Prints an item |
+| `vault pick` | Chooses an item in a launcher menu and copies its password |
 | `vault add <name>` | Adds a login, or a note with `--note` |
 | `vault edit <item>` | Edits an item in the editor |
 | `vault rm <item>` | Deletes an item |
@@ -119,6 +120,34 @@ reaches the helper through a pipe, never through arguments or the environment. B
 Wayland compositors with the data control protocol are supported; other Wayland compositors use
 the X11 clipboard through XWayland. A clipboard manager may keep its own copy regardless of the
 hint.
+
+### Picker
+
+`vault pick` shows the items in a launcher menu (rofi, fuzzel, or dmenu) and copies the chosen
+item's password as `show -c` does, so a desktop key binding reaches a password without a terminal.
+Options: `--field <name>` copies that value instead, with the names `show --field` takes;
+`--print` prints the value on standard output instead of copying it, for a pipe to a typing tool
+such as `wtype` or `xdotool`; and `--launcher rofi|fuzzel|dmenu`.
+
+- Without `--launcher`, the command runs the first launcher it finds in `$PATH`: fuzzel, rofi, then
+  dmenu when `$WAYLAND_DISPLAY` is set, and otherwise rofi, then dmenu.
+- The menu lists, in the order of `ls`, the items with a non-empty value for the field: by default
+  the logins with a password. Each line is `folder/name` and the username, escaped as text output
+  is, with newline and tab escaped as well. Lines that would be equal end with the item's ID
+  prefix. The menu reaches the launcher through a pipe and holds no password or other value.
+- A chosen line selects its item. Text that matches no line, which rofi and fuzzel can return,
+  selects nothing and is never echoed, since it may be a password typed into the wrong window.
+  Closing the menu cancels the command with code `cancelled` and exit code 1.
+- When the vault key is needed and `--password-fd` is not given, the command reads the master
+  password from the launcher in its password mode (rofi `-password`, fuzzel `--password`), which
+  hides what is typed; after a wrong one, the next prompt says so. dmenu has no password mode, so
+  with dmenu `pick` needs an unlocked agent and otherwise fails with exit code 4. Other questions
+  during an unlock, such as after a credential change on another device, are not asked through the
+  launcher: they read the terminal or standard input as other commands do, so from a key binding
+  they fail or decline, and `vault sync` in a terminal answers them.
+- When standard error is not a terminal and `--json` is not given, an error other than `cancelled`
+  also appears in the launcher (`rofi -e`, or a one-line menu for fuzzel and dmenu), because a key
+  binding discards standard error.
 
 ### Password generation
 
@@ -408,6 +437,7 @@ With `--json`, a command prints one JSON object and a newline on standard output
 | --- | --- |
 | `ls`, `find` | `{"items": [{"id", "type", "name", "folder", "username", "favourite", "review"}]}` |
 | `show` | The item, as the body schema defines it; with `--reveal` only, the values of `login.password`, `login.totp`, hidden fields, `password_history`, and `login.passkeys`, which are otherwise `null`; with `--field`, `{"id", "value"}`; with `-c`, `{"id", "copied"}`; an item of a type the client does not know is `{"id", "type"}` unless `--reveal` is given |
+| `pick` | `{"id", "copied"}`; with `--print`, `{"id", "value"}` |
 | `add`, `edit`, `rm`, `mv` | `{"id", "synced"}` |
 | `gen` | `{"value", "bits"}` |
 | `sync` | `{"outcome": "up_to_date" \| "adopted" \| "pushed", "generation", "dropped": [names]}` |

@@ -1,11 +1,13 @@
-//! The item commands: `ls`, `find`, `show`, `add`, `edit`, `rm`, and `mv`.
+//! The item commands: `ls`, `find`, `show`, `pick`, `add`, `edit`, `rm`, and `mv`.
 
 use super::AddArgs;
 use crate::error::{CliError, Exit, Result};
 use crate::items::{self, display_name, select};
-use crate::output::{JsonResult, obj, s};
+use crate::launcher::Launcher;
+use crate::output::{JsonResult, escape, obj, s};
 use crate::session::{self, Ctx, OsRng, Session};
-use crate::sys::{clip, editor, prompt};
+use crate::sys::{clip, editor, launcher, prompt};
+use std::collections::HashMap;
 use vault_client::items as listing;
 use vault_core::body::{Item, ItemData, ItemFields, TYPE_LOGIN, TYPE_NOTE};
 use vault_core::edit::{add_item, delete_item, update_item};
@@ -83,6 +85,100 @@ pub fn show(
             Ok(items::item_json(item, reveal).into())
         }
     }
+}
+
+/// `vault pick`: chooses an item in a launcher menu and copies, or prints, its `field` value.
+/// When nothing reads standard error, an error also appears in the launcher.
+pub fn pick(ctx: &Ctx, field: &str, print: bool, chosen: Option<Launcher>) -> Result<JsonResult> {
+    let l = launcher::choose(chosen)?;
+    prompt::use_launcher(l);
+    let r = pick_with(ctx, l, field, print);
+    if let Err(e) = &r
+        && !ctx.out.json
+        && !ctx.out.stderr_tty
+        && e.code() != "cancelled"
+    {
+        l.show_error(&format!("vault: {e}"));
+    }
+    r
+}
+
+fn pick_with(ctx: &Ctx, l: Launcher, field: &str, print: bool) -> Result<JsonResult> {
+    let session = session::open(ctx)?;
+    let has_value = |i: &&Item| items::field_value(i, field).is_ok_and(|v| !v.is_empty());
+    let found = listing::sorted(session.body.items.iter().filter(has_value).collect());
+    if found.is_empty() {
+        return Err(CliError::new(
+            Exit::Item,
+            "item.not_found",
+            format!("no item has a {field:?} value"),
+        ));
+    }
+    let lines = menu_lines(&found);
+    let choice = launcher::menu(l, &lines)?;
+    let mut chosen = found
+        .iter()
+        .zip(&lines)
+        .filter(|(_, line)| **line == *choice.as_str())
+        .map(|(i, _)| *i);
+    // The chosen text is never echoed: it may be a password typed into the wrong window.
+    let item = match (chosen.next(), chosen.next()) {
+        (Some(i), None) => i,
+        (None, _) => {
+            return Err(CliError::new(
+                Exit::Item,
+                "item.not_found",
+                "the selection matches no item",
+            ));
+        }
+        (Some(_), Some(_)) => {
+            return Err(CliError::new(
+                Exit::Item,
+                "item.ambiguous",
+                "the selection matches more than one item",
+            ));
+        }
+    };
+    let value = items::field_value(item, field)?;
+    if print {
+        ctx.out.line(value);
+        return Ok(obj([("id", s(&item.id)), ("value", s(value))]).into());
+    }
+    clip::copy(value, ctx.settings.clear_after)?;
+    Ok(obj([("id", s(&item.id)), ("copied", Value::Bool(true))]).into())
+}
+
+/// The menu of `vault pick`: `folder/name` and the username of each item, on one line each, with
+/// the item's ID prefix after lines that would otherwise be equal.
+fn menu_lines(found: &[&Item]) -> Vec<String> {
+    let one_line = |text: &str| escape(text).replace('\n', "\\u{a}").replace('\t', "\\u{9}");
+    let lines: Vec<String> = found
+        .iter()
+        .map(|i| {
+            let user = i.login().map_or("", |l| l.username.as_str());
+            let mut line = items::full_name(i);
+            if !user.is_empty() {
+                line.push_str("  ");
+                line.push_str(user);
+            }
+            one_line(&line)
+        })
+        .collect();
+    let mut counts: HashMap<&str, usize> = HashMap::new();
+    for l in &lines {
+        *counts.entry(l).or_default() += 1;
+    }
+    found
+        .iter()
+        .zip(&lines)
+        .map(|(i, l)| {
+            if counts[l.as_str()] > 1 {
+                format!("{l}  [{}]", &i.id[..items::MIN_ID_PREFIX])
+            } else {
+                l.clone()
+            }
+        })
+        .collect()
 }
 
 /// The result of a write command.
@@ -291,6 +387,37 @@ pub fn mv(ctx: &Ctx, query: &str, folder: &str) -> Result<JsonResult> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn login(id: &str, name: &str, folder: &str, user: &str) -> Item {
+        let login = items::new_login(user, "item-password", &[]);
+        Item {
+            id: id.into(),
+            item_type: TYPE_LOGIN.into(),
+            modified: 0,
+            modified_by: String::new(),
+            review: None,
+            data: ItemData::Known(Box::new(items::new_fields(name, folder, Some(login)))),
+        }
+    }
+
+    #[test]
+    fn menu_lines_are_single_escaped_lines_and_equal_ones_carry_the_id() {
+        let a = login("aaaaaaaa-1", "GitHub", "", "ned");
+        let b = login("bbbbbbbb-2", "GitHub", "", "ned");
+        let c = login("cccccccc-3", "GitHub", "Work", "ned");
+        let d = login("dddddddd-4", "two\nlines\tand \u{202e}bidi", "", "");
+        let lines = menu_lines(&[&a, &b, &c, &d]);
+        assert_eq!(
+            lines,
+            [
+                "GitHub  ned  [aaaaaaaa]",
+                "GitHub  ned  [bbbbbbbb]",
+                "Work/GitHub  ned",
+                "two\\u{a}lines\\u{9}and \\u{202e}bidi",
+            ]
+        );
+        assert!(lines.iter().all(|l| !l.contains('\n')), "{lines:?}");
+    }
 
     #[test]
     fn error_comments_replace_only_the_header_ones() {
