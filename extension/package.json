@@ -26,7 +26,7 @@
     "binaryen": "132.0.0",
     "esbuild": "0.28.2",
     "fake-indexeddb": "6.2.5",
-    "happy-dom": "21.0.1",
+    "happy-dom": "21.0.4",
     "typescript": "7.0.2"
   }
 }
